@@ -60,3 +60,10 @@ persistent — your demo account keeps its history between visits.
 Contact: rohannj29@gmail.com
 
 The code excerpts in `docs/` are published for review; all rights reserved.
+
+## Development activity
+
+The application code is private; these figures come from its git history.
+
+![128 commits between 06/16/2026 and 08/02/2026, 96 in the last 30 days](assets/activity.svg)
+
