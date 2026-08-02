@@ -30,7 +30,7 @@ underneath.
 4. **Repeat.** Performance is tracked against an S&P 500 buy-and-hold
    baseline, club-wide and per member.
 
-## What I'd want you to look at
+## Where to look
 
 - **[docs/SAFETY.md](docs/SAFETY.md)** — how the system decides when it is
   allowed to spend real money, and the near-miss where a stuck session almost
@@ -39,10 +39,10 @@ underneath.
   codebase on one box, and the file boundary that lets the public demo show
   the real club's track record without holding a single credential for the
   production database.
-- **[docs/DESIGN.md](docs/DESIGN.md)** — product decisions and why. The one
-  I'll defend hardest: the charts never draw a price that didn't happen. I
-  measured the Catmull-Rom smoothing everyone uses and it overshot the data's
-  true high/low on 13 of 15 symbol/range pairs, so it's gone.
+- **[docs/DESIGN.md](docs/DESIGN.md)** — product decisions and why. The
+  firmest one: the charts never draw a price that didn't happen. Measured
+  against real payloads, the Catmull-Rom smoothing most charts use overshot
+  the true high/low on 13 of 15 symbol/range pairs, so it's gone.
 
 The documents quote short excerpts from the private repo. The full source
 stays private because it runs a live club with real accounts attached.
