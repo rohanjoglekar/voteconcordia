@@ -1,6 +1,9 @@
 # Design decisions
 
-Product and UI calls, with the reasoning.
+This document collects Concordia's product and UI decisions and the reasoning
+behind them. It exists so the trade-offs — costs, chart honesty, what a member
+is actually committing to — stay attached to the choices they produced instead
+of living only in commit history.
 
 ## Rebalance, not liquidate
 
@@ -20,7 +23,8 @@ refusal there is the price of the diff design, and worth it.
 Three rules, all learned the hard way.
 
 **No smoothing.** The price charts originally used Catmull-Rom splines like
-most consumer finance UIs. Then I measured what the curve actually drew:
+most consumer finance UIs. Then came a measurement of what the curve actually
+drew:
 against a series bounded 0..100, control points reached 116.7, and replayed
 against real payloads the rendered path exceeded the data's true high/low on
 13 of 15 symbol/range pairs. XOM's 3M range of [131.08, 148.67] rendered as
@@ -45,8 +49,9 @@ club), so gaps between real observations are bridged by estimates shaped by
 the club's own performance index and pinned to real recordings at both ends,
 and the payload flags every estimated point as an estimate, so the UI can
 render it differently. An estimate never overrides a recording, and as real
-sessions accumulate the estimates retire day by day. I even removed the 1D
-range rather than fake it: the dense recording was younger than a day, and a
+sessions accumulate the estimates retire day by day. The 1D
+range was removed outright rather than faked: the dense recording was younger
+than a day, and a
 1D chart with two real points is a lie with an x-axis.
 
 **Say what the number is.** When a stock page shows the previous close's
@@ -56,22 +61,22 @@ and one you have to second-guess.
 
 ## The demo is the real codebase
 
-I needed something public for people who will never be invited to a private
-club. The standard move is a marketing page with screenshots. Instead the
+A private club still needs something public for people who will never be
+invited. The standard move is a marketing page with screenshots. Instead the
 demo at demo.voteconcordia.com runs the production application against a
 deterministic simulated brokerage, in an isolated instance with its own
 database and keys, so anyone can sign up and use the actual product. The one
 thing the demo can't simulate is a track record, so it shows the real club's,
 mirrored one-way through the file boundary described in
-[ARCHITECTURE.md](ARCHITECTURE.md) — which also covers why I ruled out both
-fake fixtures and a direct read-only connection to the production database.
+[ARCHITECTURE.md](ARCHITECTURE.md) — which also covers why both fake fixtures
+and a direct read-only connection to the production database were ruled out.
 
 ## The onboarding wizard
 
 Joining a real-money club is consequential, so onboarding is a wizard with
 explicit stages — the club's rules, a suitability check, the stake commitment,
 then the brokerage OAuth connect — rather than a form with defaults. The stake
-step is the one I care most about: a member commits a specific slice of their
+step carries the most weight: a member commits a specific slice of their
 account and the system promises that only that slice ever trades. Rebalance
 budgets are computed from the committed stake, not from available buying
 power, so the club can never quietly grow into money a member didn't put on

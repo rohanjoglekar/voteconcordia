@@ -1,9 +1,11 @@
 # Money safety
 
-This system places real market orders in other people's brokerage accounts,
-so everything below exists because I assumed from day one that timers
-double-fire, feeds return partial data, sessions get stuck, and that sooner
-or later I would fat-finger a config myself.
+This document covers how the system decides when it is allowed to spend real
+money, and which way it fails when a dependency misbehaves. The system places
+real market orders in other people's brokerage accounts, so everything below
+exists because of a day-one assumption that timers double-fire, feeds return
+partial data, sessions get stuck, and sooner or later somebody fat-fingers a
+config.
 
 ## Three switches, and two guards on top
 
@@ -15,7 +17,7 @@ sizes every order and runs every pre-trade review, it just records instead of
 placing. Two more guards can knock a live run back down after the fact: a
 human-quorum floor (the research bots vote, but fewer than the minimum number
 of *human* voters means no real orders; bots can't auto-buy a basket on a
-zero-turnout day), and a calendar-coverage check (if my hand-maintained market
+zero-turnout day), and a calendar-coverage check (if the hand-maintained market
 holiday table has lapsed past its last covered year, the system can't know
 today is a trading day, so it refuses to trade rather than guess).
 
@@ -33,10 +35,10 @@ def ref_id_for(session_id: int, member_id: int, symbol: str) -> str:
 ```
 
 If a run crashes halfway and restarts, the retry produces the same ref-ids, so
-the broker and my own placed-order records both recognize the duplicate. A
+the broker and the local placed-order records both recognize the duplicate. A
 reconcile pass runs before each execution and settles the ambiguous cases
-against the broker's order feed as ground truth: an order that errored on my
-side but actually filled at the broker gets promoted to placed (not silently
+against the broker's order feed as ground truth: an order that errored
+locally but actually filled at the broker gets promoted to placed (not silently
 re-attempted), estimated quantities get rewritten to real fills, and
 broker-rejected rows get demoted.
 
@@ -44,9 +46,9 @@ broker-rejected rows get demoted.
 
 Every order — sell and buy, live or dry-run — goes through Robinhood's own
 pre-trade review before placement, and a blocking alert kills that order
-rather than being retried or overridden. I want the layer with the freshest
-view of the account (day-trade counters, restrictions, halts) to be able to
-say no.
+rather than being retried or overridden. The layer with the freshest
+view of the account (day-trade counters, restrictions, halts) should be the
+one able to say no.
 
 ## The stale-basket refusal
 
@@ -78,7 +80,7 @@ if age_days is not None and age_days > STALE_BASKET_DAYS:
 
 ## Fail open for members, fail closed for money
 
-This is the rule I apply whenever a dependency misbehaves, and the direction
+This is the rule applied whenever a dependency misbehaves, and the direction
 flips depending on what's at stake:
 
 - **A broker outage never blocks voting.** Ballots are a pure database
@@ -110,7 +112,7 @@ flips depending on what's at stake:
   read reports `None`, never 0.)
 
 The common thread: when the system is unsure, it does less, says why in the
-audit log, and leaves a trail a human can act on. The tests I lean on hardest
+audit log, and leaves a trail a human can act on. The most load-bearing tests
 sit in three of the backend suites: `test_stale_basket_guard.py` (five tests
 around the refusal above), `test_executor_fixes.py` (28 executor edge cases,
 most of them found in audits), and the recorder tests in

@@ -13,9 +13,7 @@ The club has been live and trading real money since July 2026 — private
 members trading in their own accounts, alongside research bots that vote but
 control no money. The demo above runs the same codebase against a simulated
 brokerage: voting, research, the basket, history, and the account dashboard
-all work; only the orders are fake. Demo sign-ups are open. Designed, built,
-and operated by one person: backend, frontend, execution engine, and the ops
-underneath.
+all work; only the orders are fake. Demo sign-ups are open.
 
 ## How a cycle works
 

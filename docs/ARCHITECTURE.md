@@ -1,9 +1,12 @@
 # Architecture
 
-Concordia is deliberately small: one box, two instances of one codebase, no
-queue, no Kubernetes, no microservices. A club of this size doesn't need
-horizontal scale; it needs to be auditable by one person at 7am when a timer
-misfires. Every piece below was chosen so I can hold the whole system in my
+This document maps how Concordia is put together — backend, frontend,
+brokerage integration, and the boundary between the live club and the public
+demo — and records why each piece is shaped the way it is. Concordia is
+deliberately small: one box, two instances of one codebase, no queue, no
+Kubernetes, no microservices. A club of this size doesn't need horizontal
+scale; it needs to be auditable by one person at 7am when a timer misfires,
+so every piece below was chosen to keep the whole system holdable in one
 head.
 
 ## The shape of it
@@ -35,7 +38,7 @@ console shell.
 
 **Brokerage** is Robinhood's agentic trading MCP. Each member OAuths their own
 account during onboarding; tokens land in the encrypted vault and are only
-ever decrypted server-side. Members never share credentials with me or with
+ever decrypted server-side. Members never share credentials with the club or with
 each other, and the club has no account of its own; every order is placed in
 the member's account, by the member's token, against the member's committed
 stake.
@@ -62,8 +65,8 @@ Seeding fake fixtures would have invented a track record, which is worse than
 showing nothing. So the demo shows the real club's record, and the interesting
 part is how that data crosses over.
 
-The obvious design is to point the demo backend at the live database
-read-only. I didn't do that, because the demo is a public sign-up, and that
+The obvious design — pointing the demo backend at the live database
+read-only — was rejected, because the demo is a public sign-up, and that
 design puts it one bug away from members' rows and encrypted broker tokens.
 Instead, a job on the *production* side periodically writes a single JSON file
 containing only club-level payloads, and the demo reads that file. The demo
@@ -123,7 +126,7 @@ base = "LIVE" if will_place else ("DRY_RUN(disarmed)" if settings.is_live else "
 
 Everything downstream of `will_place=False` still runs — reviews, sizing,
 records — it just never touches money. That means a disarmed run produces the
-exact artifact I'd want to inspect before arming. The full safety design,
+exact artifact worth inspecting before arming. The full safety design,
 including the stale-basket refusal and the fail-open/fail-closed split, is in
 [SAFETY.md](SAFETY.md).
 
