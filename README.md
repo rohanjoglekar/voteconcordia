@@ -9,13 +9,13 @@ automatically in each member's own Robinhood account. The club never pools
 money, never takes custody, and has no way to move funds in or out of anyone's
 account.
 
-I built it alone: backend, frontend, execution engine, and the ops around it.
-The real club has been live and trading since July 2026. It is small and
-private, which is the point: a handful of people I know, trading their own
-accounts, plus a fleet of research bots that vote but control no money. The
-demo above is the same codebase running against a simulated brokerage:
-everything works (voting, research, the basket, history, the account
-dashboard) except that orders are fake. Sign-ups on the demo are open.
+The club has been live and trading real money since July 2026 — private
+members trading in their own accounts, alongside research bots that vote but
+control no money. The demo above runs the same codebase against a simulated
+brokerage: voting, research, the basket, history, and the account dashboard
+all work; only the orders are fake. Demo sign-ups are open. Designed, built,
+and operated by one person: backend, frontend, execution engine, and the ops
+underneath.
 
 ## How a cycle works
 
