@@ -11,7 +11,7 @@ account.
 
 I built it alone: backend, frontend, execution engine, and the ops around it.
 The real club has been live and trading since July 2026. It is small and
-private, which is the point — a handful of people I know, trading their own
+private, which is the point: a handful of people I know, trading their own
 accounts, plus a fleet of research bots that vote but control no money. The
 demo above is the same codebase running against a simulated brokerage:
 everything works (voting, research, the basket, history, the account
@@ -26,18 +26,15 @@ dashboard) except that orders are fake. Sign-ups on the demo are open.
 3. **Execute.** The basket is rebalanced into every participating member's own
    account. Names leaving the basket are sold, entrants bought, holdovers left
    alone. Sells and buys run on consecutive trading days so a cash account can
-   settle (T+1) — no margin anywhere.
+   settle (T+1); no margin anywhere.
 4. **Repeat.** Performance is tracked against an S&P 500 buy-and-hold
    baseline, club-wide and per member.
 
 ## What I'd want you to look at
 
 - **[docs/SAFETY.md](docs/SAFETY.md)** — how the system decides when it is
-  allowed to spend real money. Three independent switches gate every order,
-  ref-ids make placement idempotent, and the buy leg refuses baskets older
-  than five days after a stuck session nearly re-bought one the club had
-  exited six cycles earlier. Also the rule I apply everywhere: fail open where
-  it protects members, fail closed where it protects money.
+  allowed to spend real money, and the near-miss where a stuck session almost
+  re-bought a basket the club had deliberately exited six cycles earlier.
 - **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** — two instances of one
   codebase on one box, and the file boundary that lets the public demo show
   the real club's track record without holding a single credential for the
@@ -61,3 +58,5 @@ Production is invite-only and stays that way for now. The demo is public and
 persistent — your demo account keeps its history between visits.
 
 Contact: rohannj29@gmail.com
+
+The code excerpts in `docs/` are published for review; all rights reserved.

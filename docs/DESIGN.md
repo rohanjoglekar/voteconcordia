@@ -1,7 +1,6 @@
 # Design decisions
 
-Product and UI calls, with the reasoning. Some of these cost me features I
-wanted; I think each trade was right.
+Product and UI calls, with the reasoning.
 
 ## Rebalance, not liquidate
 
@@ -39,11 +38,11 @@ crossed its own labels. The comment now guarding that code:
  *  monotone/shape-preserving, never Catmull-Rom. */
 ```
 
-**Recorded, not interpolated.** The account-value chart is built from actual
-observations written every 10 minutes, and a failed read leaves a gap rather
+**Real observations.** The account-value chart is built from actual
+readings written every 10 minutes, and a failed read leaves a gap rather
 than a made-up point. Early history is sparse (the recorder is newer than the
 club), so gaps between real observations are bridged by estimates shaped by
-the club's own performance index and pinned to real recordings at both ends —
+the club's own performance index and pinned to real recordings at both ends,
 and the payload flags every estimated point as an estimate, so the UI can
 render it differently. An estimate never overrides a recording, and as real
 sessions accumulate the estimates retire day by day. I even removed the 1D
@@ -59,17 +58,15 @@ and one you have to second-guess.
 
 I needed something public for people who will never be invited to a private
 club. The standard move is a marketing page with screenshots. Instead the
-demo at demo.voteconcordia.com runs the production application — same
-executor, same voting engine, same onboarding — against a deterministic
-simulated brokerage, in an isolated instance with its own database and keys.
-Anyone can sign up and use the actual product. The one thing the demo can't
-simulate is a track record, so it doesn't try: the club history and
-performance shown there are the real club's, mirrored one-way through the
-file boundary described in [ARCHITECTURE.md](ARCHITECTURE.md). Fake fixtures
-would have invented a record; an empty history would have hidden the product.
-Mirroring the real one was the option that neither lied nor hid.
+demo at demo.voteconcordia.com runs the production application against a
+deterministic simulated brokerage, in an isolated instance with its own
+database and keys, so anyone can sign up and use the actual product. The one
+thing the demo can't simulate is a track record, so it shows the real club's,
+mirrored one-way through the file boundary described in
+[ARCHITECTURE.md](ARCHITECTURE.md) — which also covers why I ruled out both
+fake fixtures and a direct read-only connection to the production database.
 
-## Guided onboarding, not a settings page
+## The onboarding wizard
 
 Joining a real-money club is consequential, so onboarding is a wizard with
 explicit stages — the club's rules, a suitability check, the stake commitment,
@@ -85,7 +82,7 @@ deletion is self-serve.
 
 The member site, the admin console, and the demo are one Next.js build; the
 hostname picks the shell. This keeps the admin console from drifting behind
-the member app (they can't — they ship together) and means the demo is
+the member app (they can't; they ship together) and means the demo is
 provably running the same frontend the club uses. Since browser storage is
 per-origin, each host's sessions are isolated by the platform itself: an admin
 token can't leak into the member site, and a demo login can't collide with a
@@ -93,12 +90,11 @@ real one. The admin host swaps the entire shell for a role-gated console
 before anything renders, and the demo host adjusts branding so nobody
 mistakes fake money for real.
 
-## Derived, not duplicated
+## Presentation state never overwrites trading records
 
-A recurring pattern across the codebase: presentation state is computed from
-trading records, never written back over them. Order rows keep their raw
-review/place/error payloads forever, and anything the UI needs — cycle
-status, member health, performance — is derived at read time. The one
-exception proves the rule: the reconcile pass may rewrite an order's
-*quantity*, but only to replace an estimate with the broker's actual fill,
-moving the record closer to truth, not further from it.
+A recurring pattern across the codebase: anything the UI needs is computed
+from trading records, never written back over them. Order rows keep their raw
+review/place/error payloads forever, and cycle status, member health, and
+performance are all derived at read time. The one exception: the reconcile
+pass may rewrite an order's *quantity*, and only to replace an estimate with
+the broker's actual fill.

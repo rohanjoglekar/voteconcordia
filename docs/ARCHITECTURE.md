@@ -23,12 +23,6 @@ the demo — from one deployed artifact:
 
 ```ts
 // web/lib/host.ts
-export function isAdminHost(): boolean {
-  if (typeof window === "undefined") return false;
-  const h = window.location.hostname;
-  return h === "admin.voteconcordia.com" || h.startsWith("admin.");
-}
-
 /** demo.voteconcordia.com — the public fake-money instance. */
 export function isDemoHost(): boolean {
   if (typeof window === "undefined") return false;
@@ -36,10 +30,13 @@ export function isDemoHost(): boolean {
 }
 ```
 
+An `isAdminHost` twin does the same for `admin.`, which selects the ops
+console shell.
+
 **Brokerage** is Robinhood's agentic trading MCP. Each member OAuths their own
 account during onboarding; tokens land in the encrypted vault and are only
 ever decrypted server-side. Members never share credentials with me or with
-each other, and the club has no account of its own — every order is placed in
+each other, and the club has no account of its own; every order is placed in
 the member's account, by the member's token, against the member's committed
 stake.
 
