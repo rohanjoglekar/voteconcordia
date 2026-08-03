@@ -49,13 +49,18 @@ the **wisdom of crowds** more disciplined by combining four conditions:
   accumulates instead of overreacting to one successful call.
 
 ```mermaid
-%%{init: {"themeVariables": {"fontSize": "20px"}, "flowchart": {"nodeSpacing": 55, "rankSpacing": 65, "curve": "linear"}}}%%
-flowchart TB
-    perspectives["Diverse independent<br/>perspectives"] --> ballot["Conviction-weighted<br/>ballots"]
-    ballot --> basket["Transparent<br/>consensus basket"]
-    basket --> outcomes["Benchmark-relative<br/>outcomes"]
-    outcomes --> influence["Updated influence<br/>for the next cycle"]
-    influence -. feedback .-> perspectives
+%%{init: {"theme": "base", "themeVariables": {"fontSize": "17px", "lineColor": "#64748b", "edgeLabelBackground": "#ffffff"}, "flowchart": {"nodeSpacing": 32, "rankSpacing": 38, "curve": "basis"}}}%%
+flowchart LR
+    voices(["DIVERSE<br/>PERSPECTIVES"]):::voice --> consensus["TRANSPARENT<br/>CONSENSUS"]:::engine
+    consensus --> mandate(["SHARED<br/>MANDATE"]):::mandate
+    mandate --> score["BENCHMARKED<br/>OUTCOMES"]:::score
+    score -. "next-cycle evidence" .-> voices
+
+    classDef voice fill:#eff6ff,stroke:#2563eb,color:#1e3a8a,stroke-width:2px,font-weight:700;
+    classDef engine fill:#0f172a,stroke:#14b8a6,color:#f8fafc,stroke-width:2px,font-weight:700;
+    classDef mandate fill:#ccfbf1,stroke:#0f766e,color:#134e4a,stroke-width:2px,font-weight:700;
+    classDef score fill:#f8fafc,stroke:#64748b,color:#334155,stroke-width:2px,font-weight:700;
+    linkStyle default stroke:#64748b,stroke-width:2px;
 ```
 
 The club has operated with real capital since July 2026. Private members
@@ -71,38 +76,36 @@ open.
 
 ## System at a glance
 
-### From individual judgment to a club mandate
-
 ```mermaid
-%%{init: {"themeVariables": {"fontSize": "20px"}, "flowchart": {"nodeSpacing": 55, "rankSpacing": 65, "curve": "linear"}}}%%
+%%{init: {"theme": "base", "themeVariables": {"fontSize": "17px", "lineColor": "#64748b", "edgeLabelBackground": "#ffffff"}, "flowchart": {"nodeSpacing": 32, "rankSpacing": 42, "curve": "basis"}}}%%
 flowchart TB
-    members["Member ballots"] --> voting["Voting-power and<br/>consensus engine"]
-    agents["Bounded research-agent<br/>signals"] --> voting
-    timers["Scheduled cycle<br/>lifecycle"] -. coordinates .-> voting
-    voting --> basket["Auditable<br/>consensus basket"]
-```
+    subgraph governance["01 · COLLECTIVE MANDATE"]
+        direction LR
+        members(["MEMBER<br/>BALLOTS"]):::voice --> consensus["CONSENSUS<br/>ENGINE"]:::engine
+        agents(["BOUNDED AGENT<br/>SIGNALS"]):::agent --> consensus
+        consensus --> basket(["AUDITABLE<br/>BASKET"]):::mandate
+    end
 
-### From the club mandate to independent accounts
+    subgraph execution["02 · INDEPENDENT EXECUTION"]
+        direction LR
+        controls{"HUMAN + RUNTIME<br/>SAFETY GATES"}:::gate --> accounts["PER-MEMBER<br/>REBALANCE"]:::account
+        accounts --> broker["BROKER REVIEW<br/>+ ORDER"]:::broker
+        broker --> audit(["RECONCILE<br/>+ AUDIT"]):::audit
+    end
 
-```mermaid
-%%{init: {"themeVariables": {"fontSize": "20px"}, "flowchart": {"nodeSpacing": 55, "rankSpacing": 65, "curve": "linear"}}}%%
-flowchart TB
-    basket["Consensus basket"] --> gates["Human quorum · mode<br/>arming · calendar · kill state"]
-    gates --> plans["Independent rebalance<br/>plan per member"]
-    plans --> review["Broker pre-trade<br/>review"]
-    review --> orders["Member-account<br/>orders and fills"]
-    orders --> audit["Reconciliation<br/>and audit trail"]
-```
+    basket --> controls
 
-### Public demonstration boundary
-
-```mermaid
-%%{init: {"themeVariables": {"fontSize": "20px"}, "flowchart": {"nodeSpacing": 60, "rankSpacing": 60, "curve": "linear"}}}%%
-flowchart LR
-    production["Production club state"] --> exporter["Allowlisted aggregate<br/>one-way export"]
-    exporter --> demo["Isolated demo instance<br/>independent database"]
-    simulator["Deterministic broker simulator"] --> demo
-    visitors["Public visitors"] --> demo
+    classDef voice fill:#eff6ff,stroke:#2563eb,color:#1e3a8a,stroke-width:2px,font-weight:700;
+    classDef agent fill:#ecfeff,stroke:#0891b2,color:#164e63,stroke-width:2px,font-weight:700;
+    classDef engine fill:#0f172a,stroke:#14b8a6,color:#f8fafc,stroke-width:2px,font-weight:700;
+    classDef mandate fill:#ccfbf1,stroke:#0f766e,color:#134e4a,stroke-width:2px,font-weight:700;
+    classDef gate fill:#fef3c7,stroke:#d97706,color:#78350f,stroke-width:2px,font-weight:700;
+    classDef account fill:#ecfdf5,stroke:#059669,color:#064e3b,stroke-width:2px,font-weight:700;
+    classDef broker fill:#f8fafc,stroke:#475569,color:#1e293b,stroke-width:2px,font-weight:700;
+    classDef audit fill:#f1f5f9,stroke:#64748b,color:#334155,stroke-width:2px,font-weight:700;
+    style governance fill:#f8fafc,stroke:#2563eb,stroke-width:2px,color:#1e3a8a
+    style execution fill:#f0fdfa,stroke:#0f766e,stroke-width:2px,color:#134e4a
+    linkStyle default stroke:#64748b,stroke-width:2px;
 ```
 
 The platform coordinates one shared portfolio decision while preserving

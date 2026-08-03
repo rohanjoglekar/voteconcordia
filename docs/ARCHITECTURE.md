@@ -9,44 +9,42 @@ order sizing. The design prioritizes an execution path that one operator can
 inspect, reconcile, and recover over distributed infrastructure that the
 club's workload does not require.
 
-## Production and demonstration topology
-
-### Governance and authorization
+## Production topology
 
 ```mermaid
-%%{init: {"themeVariables": {"fontSize": "20px"}, "flowchart": {"nodeSpacing": 55, "rankSpacing": 65, "curve": "linear"}}}%%
+%%{init: {"theme": "base", "themeVariables": {"fontSize": "17px", "lineColor": "#64748b", "edgeLabelBackground": "#ffffff"}, "flowchart": {"nodeSpacing": 30, "rankSpacing": 42, "curve": "basis"}}}%%
 flowchart TB
-    clients["Member and admin<br/>client surfaces"] --> api["FastAPI<br/>application layer"]
-    api --> voting["Voting-power and<br/>consensus engine"]
-    lifecycle["Scheduled lifecycle<br/>jobs"] -. coordinates .-> voting
-    voting --> basket["Consensus basket"]
-    basket --> gates["Execution authorization<br/>and safety gates"]
-```
+    subgraph governance["01 · GOVERNANCE"]
+        direction LR
+        clients(["MEMBER + ADMIN<br/>SURFACES"]):::voice --> api["FASTAPI<br/>APPLICATION"]:::api
+        api --> consensus["VOTING POWER +<br/>CONSENSUS"]:::engine
+        lifecycle(["SCHEDULED<br/>LIFECYCLE"]):::scheduler -.-> consensus
+        consensus --> basket(["CLUB<br/>MANDATE"]):::mandate
+    end
 
-### Per-member execution and reconciliation
+    subgraph execution["02 · MEMBER-SCOPED EXECUTION"]
+        direction LR
+        gates{"AUTHORIZATION<br/>+ SAFETY GATES"}:::gate --> plan["PER-MEMBER PLAN<br/>+ SCOPED TOKEN"]:::account
+        plan --> broker["BROKER REVIEW<br/>+ ORDER"]:::broker
+        broker --> audit(["RECONCILE<br/>+ AUDIT"]):::audit
+    end
 
-```mermaid
-%%{init: {"themeVariables": {"fontSize": "20px"}, "flowchart": {"nodeSpacing": 55, "rankSpacing": 65, "curve": "linear"}}}%%
-flowchart TB
-    gates["Authorized club mandate"] --> planner["Member-specific<br/>rebalance plan"]
-    planner --> vault["Encrypted member<br/>OAuth token"]
-    vault --> review["Broker pre-trade<br/>review"]
-    review --> fills["Order placement<br/>and fills"]
-    fills --> reconcile["Broker reconciliation<br/>and audit"]
-    reconcile --> db["SQLite WAL<br/>source of record"]
-```
+    basket --> gates
+    audit --> db[("SQLITE WAL<br/>SOURCE OF RECORD")]:::database
 
-### Production-to-demo boundary
-
-```mermaid
-%%{init: {"themeVariables": {"fontSize": "20px"}, "flowchart": {"nodeSpacing": 60, "rankSpacing": 60, "curve": "linear"}}}%%
-flowchart TB
-    db["Production source of record"] --> exporter["Allowlisted aggregate exporter"]
-    exporter --> bundle["Atomic read-only bundle"]
-    bundle --> demo["Isolated public-demo API"]
-    simulator["Deterministic broker simulator"] --> demo
-    demo --> demodb["Independent demo database"]
-    visitors["Public visitors"] --> demo
+    classDef voice fill:#eff6ff,stroke:#2563eb,color:#1e3a8a,stroke-width:2px,font-weight:700;
+    classDef api fill:#e0f2fe,stroke:#0284c7,color:#0c4a6e,stroke-width:2px,font-weight:700;
+    classDef engine fill:#0f172a,stroke:#14b8a6,color:#f8fafc,stroke-width:2px,font-weight:700;
+    classDef scheduler fill:#ecfeff,stroke:#0891b2,color:#164e63,stroke-width:2px,font-weight:700;
+    classDef mandate fill:#ccfbf1,stroke:#0f766e,color:#134e4a,stroke-width:2px,font-weight:700;
+    classDef gate fill:#fef3c7,stroke:#d97706,color:#78350f,stroke-width:2px,font-weight:700;
+    classDef account fill:#ecfdf5,stroke:#059669,color:#064e3b,stroke-width:2px,font-weight:700;
+    classDef broker fill:#f8fafc,stroke:#475569,color:#1e293b,stroke-width:2px,font-weight:700;
+    classDef audit fill:#f1f5f9,stroke:#64748b,color:#334155,stroke-width:2px,font-weight:700;
+    classDef database fill:#0f172a,stroke:#94a3b8,color:#f8fafc,stroke-width:2px,font-weight:700;
+    style governance fill:#f8fafc,stroke:#2563eb,stroke-width:2px,color:#1e3a8a
+    style execution fill:#f0fdfa,stroke:#0f766e,stroke-width:2px,color:#134e4a
+    linkStyle default stroke:#64748b,stroke-width:2px;
 ```
 
 The most important boundary is not between frontend and backend; it is between
