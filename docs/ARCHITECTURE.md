@@ -1,13 +1,13 @@
 # Architecture — auditable execution on a consolidated runtime
 
-Concordia prioritizes operational auditability over distributed complexity.
-One Linux server runs two isolated instances of the same application — the
-live club and the public demonstration — without a message queue,
-container-orchestration layer, or microservice topology. The club's workload
-does not require horizontal scale; it requires an execution path that one
-operator can inspect, reconcile, and recover when a scheduled process fails.
-This document maps the backend, frontend, brokerage integration, and controlled
-boundary between production and public data.
+This architecture document describes how Concordia's backend, frontend,
+brokerage integration, scheduled execution, and public demonstration operate
+as two isolated instances of one codebase on a single Linux server. It defines
+the runtime components, credential boundaries, one-way production-data mirror,
+per-member execution path, and separation between display caching and live
+order sizing. The design prioritizes an execution path that one operator can
+inspect, reconcile, and recover over distributed infrastructure that the
+club's workload does not require.
 
 ## Runtime components
 

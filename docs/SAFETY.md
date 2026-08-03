@@ -1,12 +1,13 @@
 # Capital safety and execution controls
 
-Concordia places real market orders within independently owned member
-brokerage accounts. Its safety model therefore assumes that scheduled jobs may
-execute more than once, upstream feeds may return partial data, trading
-sessions may remain in an intermediate state, and configuration errors will
-eventually occur. This document defines the independent authorization gates,
-idempotency controls, broker-side validation, and fail-closed behaviors that
-prevent those failures from becoming unintended trades.
+This safety document explains how Concordia authorizes, validates, reconciles,
+or refuses real-money execution within independently owned member brokerage
+accounts. It defines the platform's independent execution gates, deterministic
+order identity, broker-side veto, stale-session protection, partial-data
+handling, and consequence-based failure behavior. The model assumes scheduled
+jobs may execute more than once, upstream feeds may be incomplete, sessions
+may remain in intermediate states, and configuration errors will eventually
+occur.
 
 ## Three authorization conditions and two runtime guards
 

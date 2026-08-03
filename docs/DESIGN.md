@@ -1,11 +1,12 @@
 # Design — capital discipline and representational integrity
 
-Concordia's product design is constrained by two obligations: member capital
-must remain within the scope explicitly committed to the club, and the
-interface must never represent estimated or transformed data as observed fact.
-This document records the execution, visualization, demonstration, and
-onboarding decisions that implement those obligations, together with the
-measured evidence behind each trade-off.
+This design document explains how Concordia translates its capital-safety and
+data-integrity requirements into portfolio execution, visual reporting,
+onboarding, public demonstration, and interface architecture. It records why
+the platform rebalances only changed positions, distinguishes observations
+from estimates, limits trading to explicitly committed capital, ships one
+frontend across three isolated hosts, and prevents presentation state from
+overwriting source trading records.
 
 ## Rebalance only what changed
 

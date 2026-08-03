@@ -1,5 +1,11 @@
 # Concordia — vote-governed portfolio execution
 
+This README is the public technical overview and navigation guide for
+Concordia. It explains the club's vote-governed investment model, independent
+member-account execution, trading cycle, safety boundaries, technology stack,
+and operating status, then directs readers to the detailed safety,
+architecture, and design documents in this repository.
+
 **Live demonstration: [demo.voteconcordia.com](https://demo.voteconcordia.com) — invite code `demo`**
 
 Concordia is a production-deployed, real-money investment club in which portfolio construction is governed by member vote. During each trading cycle, participants allocate 100% of their voting power across an S&P 500 universe. The highest-conviction selections form a consensus basket, which Concordia automatically rebalances inside each participant's independently owned Robinhood account. Capital is never pooled, the club never assumes custody, and the platform has no mechanism to deposit, withdraw, or transfer member funds.
