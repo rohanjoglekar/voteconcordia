@@ -1,28 +1,28 @@
-# Architecture
+# Architecture — auditable execution on a consolidated runtime
 
-This document maps how Concordia is put together — backend, frontend,
-brokerage integration, and the boundary between the live club and the public
-demo — and records why each piece is shaped the way it is. Concordia is
-deliberately small: one box, two instances of one codebase, no queue, no
-Kubernetes, no microservices. A club of this size doesn't need horizontal
-scale; it needs to be auditable by one person at 7am when a timer misfires,
-so every piece below was chosen to keep the whole system holdable in one
-head.
+Concordia prioritizes operational auditability over distributed complexity.
+One Linux server runs two isolated instances of the same application — the
+live club and the public demonstration — without a message queue,
+container-orchestration layer, or microservice topology. The club's workload
+does not require horizontal scale; it requires an execution path that one
+operator can inspect, reconcile, and recover when a scheduled process fails.
+This document maps the backend, frontend, brokerage integration, and controlled
+boundary between production and public data.
 
-## The shape of it
+## Runtime components
 
-**Backend** is FastAPI over SQLite in WAL mode, running under systemd as a
-dedicated unix user. The database, the encrypted broker-token vault, and the
-`.env` are owned by that user and readable by nothing else on the box. There
-is no job framework: cycle mechanics (open the ballot, close and
-tally, execute sells, execute buys, refresh account snapshots every 10
-minutes, mirror the club record, back up the DB) are each a small `jobs/*.py`
-entrypoint fired by its own systemd timer. Fourteen timers, each one
-inspectable with `systemctl status` and each one restartable in isolation.
+**Backend.** FastAPI runs over SQLite in WAL mode under a dedicated Unix
+service account. That account exclusively owns the database, encrypted broker
+token vault, and environment configuration. Cycle operations — ballot opening,
+closing and tallying, sell and buy execution, ten-minute account snapshots,
+public-record mirroring, and database backup — are implemented as small
+`jobs/*.py` entry points. Fourteen independent systemd timers schedule these
+jobs, making each operation directly inspectable through `systemctl status`
+and independently restartable.
 
-**Frontend** is a single Next.js 14 build that serves three hosts. The
-hostname decides what shell you get — the member site, the admin console, or
-the demo — from one deployed artifact:
+**Frontend.** A single Next.js 14 artifact serves the member application,
+administration console, and public demonstration. Hostname-based routing
+selects the appropriate application shell:
 
 ```ts
 // web/lib/host.ts
@@ -33,50 +33,52 @@ export function isDemoHost(): boolean {
 }
 ```
 
-An `isAdminHost` twin does the same for `admin.`, which selects the ops
-console shell.
+An equivalent `isAdminHost` predicate selects the operations console for the
+`admin.` hostname.
 
-**Brokerage** is Robinhood's agentic trading MCP. Each member OAuths their own
-account during onboarding; tokens land in the encrypted vault and are only
-ever decrypted server-side. Members never share credentials with the club or with
-each other, and the club has no account of its own; every order is placed in
-the member's account, by the member's token, against the member's committed
-stake.
+**Brokerage.** Concordia integrates with Robinhood's Agentic Trading MCP. Each
+member authorizes an independently owned account through OAuth during
+onboarding. Tokens are stored in the encrypted vault and decrypted only on the
+server. Credentials are never shared with the club or other participants, and
+the club maintains no pooled brokerage account. Every order is authenticated
+with the individual member's token, placed in that member's account, and sized
+against that member's explicit capital commitment.
 
 ## Two instances, one codebase
 
-The live club and the public demo are the same application. The demo is not a
-mock frontend or a video; it runs the real executor, the real voting engine,
-the real onboarding wizard. What differs is one flag: in `DEMO_MODE` the vault
-hands back a `DemoClient` instead of a Robinhood client — deterministic canned
-data (prices derive from the symbol name, so refreshes are stable), every
-pre-trade review passes, and nothing external is ever called. `is_live` is
-forced false while the flag is on, so a demo box cannot place a real order
-even by misconfiguration.
+The live club and public demonstration execute the same application code. The
+demonstration runs the production executor, voting engine, and onboarding
+workflow rather than a mock interface. Under `DEMO_MODE`, however, the token
+vault returns a `DemoClient` instead of a Robinhood client. Market data is
+deterministic, every simulated pre-trade review succeeds, and no external
+brokerage request is made. The runtime also forces `is_live` to false whenever
+demonstration mode is active, preventing a configuration error from enabling
+real order placement.
 
-Each instance has its own database, its own session keys, its own systemd
-units. They share a box and a git checkout and nothing else.
+Each instance maintains an independent database, session keys, and systemd
+units. They share physical infrastructure and a source checkout, but no
+runtime state or credentials.
 
-## The mirror boundary
+## One-way production data boundary
 
-The demo has its own empty database, which left its club pages — the
-cycle-by-cycle history, the decisions-vs-SPY chart — with nothing to show.
-Seeding fake fixtures would have invented a track record, which is worse than
-showing nothing. So the demo shows the real club's record, and the interesting
-part is how that data crosses over.
+An isolated demonstration database contains no production trading history.
+Generating fixtures would fabricate a track record, while leaving the pages
+empty would prevent evaluation of the real reporting experience. Concordia
+therefore exposes only the club's aggregate production record through a
+constrained one-way transfer.
 
-The obvious design — pointing the demo backend at the live database
-read-only — was rejected, because the demo is a public sign-up, and that
-design puts it one bug away from members' rows and encrypted broker tokens.
-Instead, a job on the *production* side periodically writes a single JSON file
-containing only club-level payloads, and the demo reads that file. The demo
-process holds no credentials for, and no path to, the production database. If
-the demo instance were fully compromised, the attacker would have a JSON file
-of data the demo was already serving publicly.
+A direct read-only connection from the public application to the production
+database was rejected because a public sign-up surface should never have a
+code path to member records or encrypted broker tokens. Instead, a
+production-side job periodically writes a single JSON document containing
+approved club-level payloads, which the demonstration reads. The public
+process holds neither credentials nor a network path to the production
+database. Complete compromise of the demonstration would therefore expose no
+more than the aggregate JSON already intended for public display.
 
-The job also refuses to leak by accident. The club-history payload is
-identical bytes for every member (a test asserts that), and a deny-list check
-rejects the whole mirror if any member-scoped key ever shows up in a row:
+The mirror job also validates the payload before publication. Club-history
+responses are byte-identical across members, an invariant enforced by test,
+and a deny-list rejects the entire export if any member-scoped key appears:
 
 ```python
 # backend/jobs/mirror_club.py
@@ -97,18 +99,20 @@ def build(limit: int = 60) -> dict:
     # ...
 ```
 
-The write is an atomic `os.replace`, so the demo can never read a half-written
-file. On the demo side the reader fails open to local data: a missing or
-malformed mirror means the demo shows its own empty club rather than erroring.
+Publication uses atomic `os.replace`, preventing the demonstration from
+reading a partially written file. If the mirror is absent or malformed, the
+public reader falls back to its local empty-club state rather than exposing an
+error or attempting access to production.
 
-## The executor in one paragraph
+## Execution model
 
-Execution is a per-member loop: read the member's live balance and the club's
-position in their account, compute a rebalance plan against the consensus
-basket (sell what left, trim overweights, top up entrants, leave holdovers
-untouched), then run every order through the broker's pre-trade review before
-deciding whether to place it. Whether an order is *placed* at all comes down
-to one boolean assembled at the top of the run:
+Execution proceeds independently for each member. The service reads current
+balance and club-attributed holdings, computes the required changes against
+the consensus basket, and submits every proposed order to broker-side
+pre-trade review. Constituents leaving the basket are sold, overweight
+positions are reduced, entrants and underweights are funded, and correctly
+weighted holdovers generate no order. Final placement authority is represented
+by a single boolean established at the start of the run:
 
 ```python
 # backend/app/services/executor.py
@@ -124,19 +128,19 @@ if will_place and not calendar_covers(_today_et()):
 base = "LIVE" if will_place else ("DRY_RUN(disarmed)" if settings.is_live else "DRY_RUN")
 ```
 
-Everything downstream of `will_place=False` still runs — reviews, sizing,
-records — it just never touches money. That means a disarmed run produces the
-exact artifact worth inspecting before arming. The full safety design,
-including the stale-basket refusal and the fail-open/fail-closed split, is in
+When `will_place=False`, all downstream sizing, validation, review, and record
+generation still occurs, but no order reaches placement. A disarmed run
+therefore produces the same review artifact available for inspection before
+authorization. The complete control model, including stale-basket rejection
+and consequence-based failure behavior, is documented in
 [SAFETY.md](SAFETY.md).
 
-## Display reads never touch the trading path
+## Display caching is isolated from order sizing
 
-Opening the account page used to trigger live broker reads on every visit
-(about 4 seconds and five round-trips). A snapshot layer now reads each
-member's account once per 10-minute interval and serves the UI from a local
-row, stale-while-revalidate. The one rule that makes this safe is written at
-the top of the module in a box, because it must survive every future refactor:
-the snapshot is a *display* cache, and the trading path is forbidden from
-reading it. Order sizing always does its own live, uncached broker read. A
-member's page can be ten minutes stale; an order never is.
+The account page originally performed five live broker round trips per visit,
+producing approximately four seconds of latency. A snapshot layer now reads
+each member account once per ten-minute interval and serves the interface from
+a local stale-while-revalidate record. This cache is restricted to display
+paths: order sizing is prohibited from reading it and always performs a fresh,
+uncached broker query. The member interface may therefore be up to ten minutes
+behind the broker, while every trading decision uses current account state.

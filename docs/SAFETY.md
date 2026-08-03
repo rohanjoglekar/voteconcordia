@@ -1,27 +1,30 @@
-# Money safety
+# Capital safety and execution controls
 
-This document covers how the system decides when it is allowed to spend real
-money, and which way it fails when a dependency misbehaves. The system places
-real market orders in other people's brokerage accounts, so everything below
-exists because of a day-one assumption that timers double-fire, feeds return
-partial data, sessions get stuck, and sooner or later somebody fat-fingers a
-config.
+Concordia places real market orders within independently owned member
+brokerage accounts. Its safety model therefore assumes that scheduled jobs may
+execute more than once, upstream feeds may return partial data, trading
+sessions may remain in an intermediate state, and configuration errors will
+eventually occur. This document defines the independent authorization gates,
+idempotency controls, broker-side validation, and fail-closed behaviors that
+prevent those failures from becoming unintended trades.
 
-## Three switches, and two guards on top
+## Three authorization conditions and two runtime guards
 
-A real order requires three independent conditions to hold at once:
-`EXECUTION_MODE=live` in config, the runtime ARMED flag (a human-flipped
-switch in the admin console), and the absence of a forced dry-run on the
-invocation. Any one of them off and the run degrades to review-only: it still
-sizes every order and runs every pre-trade review, it just records instead of
-placing. Two more guards can knock a live run back down after the fact: a
-human-quorum floor (the research bots vote, but fewer than the minimum number
-of *human* voters means no real orders; bots can't auto-buy a basket on a
-zero-turnout day), and a calendar-coverage check (if the hand-maintained market
-holiday table has lapsed past its last covered year, the system can't know
-today is a trading day, so it refuses to trade rather than guess).
+Real order placement requires three conditions to hold simultaneously:
+`EXECUTION_MODE=live` in configuration, an explicit runtime `ARMED` state set
+by a human in the administration console, and an invocation that has not been
+forced into dry-run mode. If any condition is absent, the executor degrades to
+review-only operation: it calculates quantities, submits pre-trade reviews,
+and records the proposed actions without placing orders.
 
-## Idempotent by construction
+Two additional guards can downgrade an otherwise authorized run. A human
+quorum floor prevents research-agent votes from creating a real basket when
+human participation falls below the configured minimum. A calendar-coverage
+check blocks execution when the maintained market-holiday table no longer
+covers the current year, because uncertainty about whether a date is tradable
+must result in no action rather than an inferred answer.
+
+## Deterministic order identity
 
 Every order's ref-id is a deterministic UUID5 over
 `(session_id, member_id, symbol)`:
@@ -34,31 +37,31 @@ def ref_id_for(session_id: int, member_id: int, symbol: str) -> str:
     return str(uuid.uuid5(_REF_NS, f"{session_id}:{member_id}:{symbol}"))
 ```
 
-If a run crashes halfway and restarts, the retry produces the same ref-ids, so
-the broker and the local placed-order records both recognize the duplicate. A
-reconcile pass runs before each execution and settles the ambiguous cases
-against the broker's order feed as ground truth: an order that errored
-locally but actually filled at the broker gets promoted to placed (not silently
-re-attempted), estimated quantities get rewritten to real fills, and
-broker-rejected rows get demoted.
+If execution stops mid-run and restarts, the retry generates the same reference
+identifiers, allowing both the broker and local order ledger to recognize the
+duplicate. Before every execution, a reconciliation pass resolves ambiguous
+local states against the broker's order feed as the system of record. An order
+that failed locally but filled at the broker is marked as placed rather than
+retried; estimated quantities are replaced with confirmed fills; and rejected
+broker orders are demoted from executable state.
 
-## The broker gets a veto
+## Broker validation is authoritative
 
-Every order — sell and buy, live or dry-run — goes through Robinhood's own
-pre-trade review before placement, and a blocking alert kills that order
-rather than being retried or overridden. The layer with the freshest
-view of the account (day-trade counters, restrictions, halts) should be the
-one able to say no.
+Every buy and sell, in both live and dry-run modes, is submitted to Robinhood's
+pre-trade review before placement. A blocking alert terminates the order and
+cannot be automatically retried or overridden. The broker has the most current
+view of account restrictions, day-trading limits, and market halts, so its
+rejection is treated as authoritative.
 
-## The stale-basket refusal
+## Stale-basket refusal
 
-The buy leg runs the day after the sell leg (T+1 settlement in a cash
-account), so it has to *find* the session it is finishing. That created a real
-near-miss: session 14 (2026-07-20) never flipped to `executed` because three
-orders errored, and weeks later it was still the only `closed` session in
-production — while the club was live and armed. Any buy-phase run would have
-re-bought a basket the club had deliberately exited six cycles earlier. The
-fix is a hard refusal:
+The buy phase runs one trading day after the sell phase to satisfy T+1 cash
+settlement and must therefore locate the session it is completing. This design
+produced a material near miss: session 14, dated 2026-07-20, remained `closed`
+after three order errors prevented transition to `executed`. Weeks later, it
+was still the only closed session while production was live and armed. A
+subsequent buy-phase invocation could have repurchased a basket the club had
+exited six cycles earlier. Concordia now applies a hard age-based refusal:
 
 ```python
 # backend/app/services/executor.py — buy phase
@@ -76,22 +79,22 @@ if age_days is not None and age_days > STALE_BASKET_DAYS:
     return {"ok": True, "note": note, "orders": [], "stale_session": session.get("id")}
 ```
 
-`STALE_BASKET_DAYS` is 5.
+`STALE_BASKET_DAYS` is set to five calendar days, covering a long weekend and
+market holiday while rejecting any session old enough to require manual
+investigation.
 
-## Fail open for members, fail closed for money
+## Preserve participation; fail closed for capital
 
-This is the rule applied whenever a dependency misbehaves, and the direction
-flips depending on what's at stake:
+Failure behavior is selected according to the consequence of uncertainty:
 
-- **A broker outage never blocks voting.** Ballots are a pure database
-  operation; nothing in the voting path touches Robinhood. Members can always
-  vote, even when the brokerage is down.
-- **An incomplete position feed never sizes an order.** The executor derives
-  what the club holds in a member's account from the broker's order feed. If
-  that derivation is incomplete — a failed page, a runaway cursor — the
-  executor skips the member for this cycle and retries the next, because
-  falling through to an empty holdings set would strand club sells or re-buy
-  the entire basket:
+- **Broker outages do not block voting.** Ballots are database-only operations
+  with no Robinhood dependency, so members retain access to governance when
+  the brokerage is unavailable.
+- **Incomplete position data cannot size an order.** The executor derives the
+  club's holdings in each member account from the broker order feed. If a
+  failed page or invalid cursor makes that derivation incomplete, the member
+  is skipped for the current cycle. Treating an incomplete feed as an empty
+  position set could omit required sells or repurchase the entire basket:
 
   ```python
   # backend/app/services/executor.py
@@ -103,18 +106,16 @@ flips depending on what's at stake:
       continue
   ```
 
-- **A failed balance read records nothing, not $0.** The 10-minute account
-  recorder validates every observation before writing; `None`, NaN, negative,
-  and absurd values — exactly the shapes a failed or partial broker read
-  produces — are refused. A refused reading leaves a gap in the chart, which
-  is recoverable; writing a false $0 would paint a crash that never happened.
-  ($0.00 itself is accepted: an empty account really is zero, and a failed
-  read reports `None`, never 0.)
+- **Failed balance reads create gaps rather than false zeros.** The ten-minute
+  account recorder rejects `None`, NaN, negative, and implausible observations
+  before persistence. A missing point is recoverable; a synthetic zero would
+  report a market loss that never occurred. A valid $0.00 balance remains
+  acceptable because failed reads return `None`, not numeric zero.
 
-The common thread: when the system is unsure, it does less, says why in the
-audit log, and leaves a trail a human can act on. The most load-bearing tests
-sit in three of the backend suites: `test_stale_basket_guard.py` (five tests
-around the refusal above), `test_executor_fixes.py` (28 executor edge cases,
-most of them found in audits), and the recorder tests in
-`test_equity_history.py`, where `test_failed_broker_read_records_nothing` and
-`test_none_balance_records_nothing` do exactly what their names say.
+Across these controls, uncertainty reduces system authority, generates an
+explicit audit event, and preserves evidence for human review. The principal
+regression coverage resides in `test_stale_basket_guard.py` with five refusal
+tests, `test_executor_fixes.py` with 28 audited execution edge cases, and the
+recorder cases in `test_equity_history.py`, including
+`test_failed_broker_read_records_nothing` and
+`test_none_balance_records_nothing`.

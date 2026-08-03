@@ -1,36 +1,42 @@
-# Design decisions
+# Design — capital discipline and representational integrity
 
-This document collects Concordia's product and UI decisions and the reasoning
-behind them. It exists so the trade-offs — costs, chart honesty, what a member
-is actually committing to — stay attached to the choices they produced instead
-of living only in commit history.
+Concordia's product design is constrained by two obligations: member capital
+must remain within the scope explicitly committed to the club, and the
+interface must never represent estimated or transformed data as observed fact.
+This document records the execution, visualization, demonstration, and
+onboarding decisions that implement those obligations, together with the
+measured evidence behind each trade-off.
 
-## Rebalance, not liquidate
+## Rebalance only what changed
 
-The naive executor sells everything and buys the new basket every cycle. It's
-simpler to write and it's wrong: it churns positions that didn't change,
-multiplies spread costs, and turns every cycle into a taxable event for names
-the club still believes in. Concordia diffs instead. Names leaving the basket
-are sold, overweights are trimmed, entrants and underweights are topped up,
-and a holdover at target weight generates no order at all. The sell and buy
-legs run on consecutive trading days because members hold cash accounts —
-sells need T+1 settlement before the proceeds can buy. That split is also what
-created the stale-basket hazard described in [SAFETY.md](SAFETY.md); the
-refusal there is the price of the diff design, and worth it.
+A full-liquidation executor would sell and repurchase the entire basket during
+every cycle. Although mechanically simple, that approach would generate
+unnecessary turnover, multiply spread costs, and create taxable transactions
+for holdings whose investment mandate had not changed. Concordia instead
+computes a portfolio difference: departing constituents are sold, overweight
+positions are reduced, entrants and underweights are funded, and a holdover at
+target weight generates no order.
 
-## Honest charts
+Sell and buy phases run on consecutive trading days because members use cash
+accounts and sale proceeds require T+1 settlement. This separation introduces
+the stale-session risk documented in [SAFETY.md](SAFETY.md), which is mitigated
+through a hard age-based refusal rather than by reverting to unnecessary
+liquidation.
 
-Three rules, all learned the hard way.
+## Charts may not exceed observed data
 
-**No smoothing.** The price charts originally used Catmull-Rom splines like
-most consumer finance UIs. Then came a measurement of what the curve actually
-drew:
-against a series bounded 0..100, control points reached 116.7, and replayed
-against real payloads the rendered path exceeded the data's true high/low on
-13 of 15 symbol/range pairs. XOM's 3M range of [131.08, 148.67] rendered as
-[130.08, 149.24] — a high $0.57 above anything that traded, on a chart that
-pins labeled guide lines to the data's actual min and max. The curve visibly
-crossed its own labels. The comment now guarding that code:
+Three visualization rules protect the distinction between measurement,
+estimation, and presentation.
+
+**No smoothing.** The original price charts used Catmull–Rom splines, a common
+choice in consumer finance interfaces. Measurement showed that the
+interpolation created prices outside the source data. A synthetic series
+bounded from 0 to 100 produced control-point values as high as 116.7. Across
+real payloads, the rendered curve exceeded the observed high or low in 13 of
+15 symbol-and-range combinations. XOM's three-month range of [131.08, 148.67]
+rendered as [130.08, 149.24], displaying a high $0.57 above any traded value
+while crossing guide lines anchored to the actual extrema. The implementation
+is now governed by the following constraint:
 
 ```tsx
 // web/components/PriceChart.tsx
@@ -42,64 +48,58 @@ crossed its own labels. The comment now guarding that code:
  *  monotone/shape-preserving, never Catmull-Rom. */
 ```
 
-**Real observations.** The account-value chart is built from actual
-readings written every 10 minutes, and a failed read leaves a gap rather
-than a made-up point. Early history is sparse (the recorder is newer than the
-club), so gaps between real observations are bridged by estimates shaped by
-the club's own performance index and pinned to real recordings at both ends,
-and the payload flags every estimated point as an estimate, so the UI can
-render it differently. An estimate never overrides a recording, and as real
-sessions accumulate the estimates retire day by day. The 1D
-range was removed outright rather than faked: the dense recording was younger
-than a day, and a
-1D chart with two real points is a lie with an x-axis.
+**Observed and estimated values remain distinguishable.** The account-value
+chart is based on real observations recorded every ten minutes; a failed read
+creates a gap rather than a synthetic point. Because the recorder was
+introduced after the club began operating, early history is sparse. Estimates
+may bridge those gaps using the club's performance index and are anchored to
+real observations at both ends, but every estimated point is identified in the
+payload and rendered distinctly. Estimates never replace recorded values and
+retire as direct observations accumulate. The one-day range was removed until
+sufficient dense history existed rather than presenting a chart based on only
+two measured points.
 
-**Say what the number is.** When a stock page shows the previous close's
-range because today hasn't traded yet, the label reads "Last session," not
-"Day range." Small thing; it's the difference between a chart you can trust
-and one you have to second-guess.
+**Labels identify the actual period.** When a security page displays the prior
+session's range before the current market has traded, the interface labels it
+“Last session” rather than “Day range.” Presentation language follows the
+observation period rather than the layout in which the value appears.
 
-## The demo is the real codebase
+## The public demonstration executes the production codebase
 
-A private club still needs something public for people who will never be
-invited. The standard move is a marketing page with screenshots. Instead the
-demo at demo.voteconcordia.com runs the production application against a
-deterministic simulated brokerage, in an isolated instance with its own
-database and keys, so anyone can sign up and use the actual product. The one
-thing the demo can't simulate is a track record, so it shows the real club's,
-mirrored one-way through the file boundary described in
-[ARCHITECTURE.md](ARCHITECTURE.md) — which also covers why both fake fixtures
-and a direct read-only connection to the production database were ruled out.
+The public application at demo.voteconcordia.com runs the production software
+against a deterministic brokerage simulator in an isolated instance with
+independent database and cryptographic keys. Visitors can complete onboarding,
+vote, inspect research, and observe execution through the same product used by
+the private club. Because a simulated brokerage cannot provide a credible
+historical record, aggregate production performance crosses a one-way file
+boundary described in [ARCHITECTURE.md](ARCHITECTURE.md). Fabricated fixtures
+and direct read-only production database access were both rejected.
 
 ## The onboarding wizard
 
-Joining a real-money club is consequential, so onboarding is a wizard with
-explicit stages — the club's rules, a suitability check, the stake commitment,
-then the brokerage OAuth connect — rather than a form with defaults. The stake
-step carries the most weight: a member commits a specific slice of their
-account and the system promises that only that slice ever trades. Rebalance
-budgets are computed from the committed stake, not from available buying
-power, so the club can never quietly grow into money a member didn't put on
-the table. Participation is one switch, pausable any time, and account
-deletion is self-serve.
+Onboarding uses explicit stages for club rules, suitability, capital
+commitment, and brokerage OAuth authorization. The capital stage defines the
+maximum portion of an account delegated to Concordia. Rebalance budgets are
+calculated from that committed amount rather than available buying power,
+preventing the club allocation from expanding into undelegated capital as an
+account grows. Members may pause participation through a single control and
+may delete their account without administrator intervention.
 
 ## One build, three hosts
 
-The member site, the admin console, and the demo are one Next.js build; the
-hostname picks the shell. This keeps the admin console from drifting behind
-the member app (they can't; they ship together) and means the demo is
-provably running the same frontend the club uses. Since browser storage is
-per-origin, each host's sessions are isolated by the platform itself: an admin
-token can't leak into the member site, and a demo login can't collide with a
-real one. The admin host swaps the entire shell for a role-gated console
-before anything renders, and the demo host adjusts branding so nobody
-mistakes fake money for real.
+The member application, administration console, and demonstration ship as one
+Next.js build, with the hostname selecting the appropriate shell. This keeps
+the operational and member interfaces on the same release and establishes
+that the demonstration uses the same frontend. Browser storage is isolated by
+origin, preventing administration tokens, member sessions, and demonstration
+credentials from colliding. The administration host selects a role-gated shell
+before rendering, while the demonstration applies explicit simulated-capital
+branding throughout the interface.
 
-## Presentation state never overwrites trading records
+## Derived presentation state cannot overwrite trading records
 
-A recurring pattern across the codebase: anything the UI needs is computed
-from trading records, never written back over them. Order rows keep their raw
-review/place/error payloads forever, and cycle status, member health, and
-performance are all derived at read time. The one exception: the reconcile
-pass may rewrite an order's *quantity*, and only to replace an estimate with
-the broker's actual fill.
+Interface state is derived from immutable trading records and is never written
+back over source events. Order rows retain their original review, placement,
+and error payloads; cycle status, member health, and performance are calculated
+at read time. The sole exception is reconciliation of order quantity, where an
+estimate may be replaced only by the broker's confirmed fill.
