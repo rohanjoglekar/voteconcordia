@@ -20,6 +20,34 @@ The core engineering challenge is translating one collective decision into
 many account-specific rebalances while preserving each member's authorization,
 capital limit, brokerage state, and audit history.
 
+## Order-authorization decision map
+
+```mermaid
+%%{init: {"themeVariables": {"fontSize": "20px"}, "flowchart": {"nodeSpacing": 55, "rankSpacing": 50, "curve": "linear"}}}%%
+flowchart TB
+    run["Scheduled or manual execution run"] --> live{"Live mode enabled?"}
+    live -- "No" --> reviewonly["Complete sizing and review<br/>record only · no order"]
+    live -- "Yes" --> armed{"Human armed?"}
+    armed -- "No" --> reviewonly
+    armed -- "Yes" --> clear{"Kill state clear?"}
+    clear -- "No" --> reviewonly
+    clear -- "Yes" --> quorum{"Human quorum met?"}
+    quorum -- "No" --> reviewonly
+    quorum -- "Yes" --> calendar{"Market calendar current?"}
+    calendar -- "No" --> reviewonly
+    calendar -- "Yes" --> fresh{"Member data complete<br/>and current?"}
+    fresh -- "No" --> skipmember["Skip member and audit reason"]
+    fresh -- "Yes" --> broker{"Broker review passes?"}
+    broker -- "No" --> skiporder["Skip order and retain alert"]
+    broker -- "Yes" --> place["Place idempotent member order"]
+```
+
+The executor performs the same sizing, validation, and pre-trade review work in
+dry-run or disarmed states, producing an inspectable artifact without touching
+capital. Uncertainty narrows authority: a failed global gate produces
+review-only output, incomplete member data skips that member, and a broker
+alert blocks only the affected order.
+
 ## Hard problems and decisions
 
 | Problem | Engineering decision | Public evidence |

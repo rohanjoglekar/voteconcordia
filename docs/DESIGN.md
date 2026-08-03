@@ -8,6 +8,30 @@ from estimates, limits trading to explicitly committed capital, ships one
 frontend across three isolated hosts, and prevents presentation state from
 overwriting source trading records.
 
+## Collective intelligence is a testable product thesis
+
+Concordia is designed around a disciplined form of the wisdom of crowds: a
+group can combine information held by different participants, but only if the
+system preserves diverse inputs, applies a transparent aggregation rule, and
+measures outcomes consistently. A raw majority vote does not satisfy those
+conditions by itself; popularity can amplify confidence without improving
+accuracy.
+
+The product therefore treats influence as accountable state rather than social
+status. Voting power blends committed capital with a smoothed measure of each
+participant's benchmark-relative historical accuracy. Capital keeps influence
+connected to economic commitment, while the accuracy component allows a
+participant with repeated signal to earn more weight over time. The accuracy
+term phases in as observations accumulate so one early success cannot dominate
+the club.
+
+This is a hypothesis under continuous measurement, not a promise of
+outperformance. The interface exposes the basket, benchmark, participation,
+and per-cycle history so the group process can be evaluated on evidence rather
+than justified after the fact. Research agents enter through the same tallying
+model under bounded aggregate influence, but they hold no execution authority
+or brokerage credentials.
+
 ## Rebalance only what changed
 
 A full-liquidation executor would sell and repurchase the entire basket during

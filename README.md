@@ -8,7 +8,55 @@ architecture, and design documents in this repository.
 
 **Live demonstration: [demo.voteconcordia.com](https://demo.voteconcordia.com) — invite code `demo`**
 
-Concordia is a production-deployed, real-money investment club in which portfolio construction is governed by member vote. During each trading cycle, participants allocate 100% of their voting power across an S&P 500 universe. The highest-conviction selections form a consensus basket, which Concordia automatically rebalances inside each participant's independently owned Robinhood account. Capital is never pooled, the club never assumes custody, and the platform has no mechanism to deposit, withdraw, or transfer member funds.
+Concordia is a production-deployed, real-money investment club in which
+portfolio construction is governed by member vote. During each trading cycle,
+participants allocate 100% of their voting power across an S&P 500 universe.
+The highest-conviction selections form a consensus basket, which Concordia
+automatically rebalances inside each participant's independently owned
+Robinhood account. Capital is never pooled, the club never assumes custody, and
+the platform has no mechanism to deposit, withdraw, or transfer member funds.
+
+> **Collective judgment, accountable influence, independent custody.**
+
+## Goal
+
+Concordia's goal is to test whether a diverse group can produce a more robust
+portfolio decision than any single participant while keeping every judgment
+measurable and every account independently controlled. It turns social
+investment discussion into a repeatable operating loop: express conviction,
+aggregate it transparently, execute one shared mandate, measure each call
+against a benchmark, and feed the evidence into the next cycle.
+
+The project does not assume that a majority is automatically correct or that
+past performance guarantees future judgment. It is designed to make the
+collective process inspectable: who expressed conviction, how influence was
+calculated, what the group selected, what each account executed, and how those
+decisions compared with the S&P 500.
+
+## Why collective intelligence
+
+The governing idea is not to follow conventional wisdom blindly. It is to make
+the **wisdom of crowds** more disciplined by combining four conditions:
+
+- **Diverse perspectives.** Members and bounded research agents may bring
+  different time horizons, sectors, and analytical styles to the same ballot.
+- **Independent judgment.** Every participant allocates a complete ballot
+  before the group result becomes the execution mandate.
+- **Transparent aggregation.** Conviction is summed through one documented
+  tally rather than selected by an opaque portfolio manager.
+- **Measurable feedback.** Voting power blends committed capital with an EWMA
+  of historical accuracy, with performance influence phased in as evidence
+  accumulates instead of overreacting to one successful call.
+
+```mermaid
+%%{init: {"themeVariables": {"fontSize": "20px"}, "flowchart": {"nodeSpacing": 55, "rankSpacing": 65, "curve": "linear"}}}%%
+flowchart TB
+    perspectives["Diverse independent<br/>perspectives"] --> ballot["Conviction-weighted<br/>ballots"]
+    ballot --> basket["Transparent<br/>consensus basket"]
+    basket --> outcomes["Benchmark-relative<br/>outcomes"]
+    outcomes --> influence["Updated influence<br/>for the next cycle"]
+    influence -. feedback .-> perspectives
+```
 
 The club has operated with real capital since July 2026. Private members
 participate through their own accounts alongside research agents whose signals
@@ -23,23 +71,37 @@ open.
 
 ## System at a glance
 
+### From individual judgment to a club mandate
+
 ```mermaid
+%%{init: {"themeVariables": {"fontSize": "20px"}, "flowchart": {"nodeSpacing": 55, "rankSpacing": 65, "curve": "linear"}}}%%
+flowchart TB
+    members["Member ballots"] --> voting["Voting-power and<br/>consensus engine"]
+    agents["Bounded research-agent<br/>signals"] --> voting
+    timers["Scheduled cycle<br/>lifecycle"] -. coordinates .-> voting
+    voting --> basket["Auditable<br/>consensus basket"]
+```
+
+### From the club mandate to independent accounts
+
+```mermaid
+%%{init: {"themeVariables": {"fontSize": "20px"}, "flowchart": {"nodeSpacing": 55, "rankSpacing": 65, "curve": "linear"}}}%%
+flowchart TB
+    basket["Consensus basket"] --> gates["Human quorum · mode<br/>arming · calendar · kill state"]
+    gates --> plans["Independent rebalance<br/>plan per member"]
+    plans --> review["Broker pre-trade<br/>review"]
+    review --> orders["Member-account<br/>orders and fills"]
+    orders --> audit["Reconciliation<br/>and audit trail"]
+```
+
+### Public demonstration boundary
+
+```mermaid
+%%{init: {"themeVariables": {"fontSize": "20px"}, "flowchart": {"nodeSpacing": 60, "rankSpacing": 60, "curve": "linear"}}}%%
 flowchart LR
-    members["Members"] --> app["Next.js member application"]
-    agents["Research agents<br/>bounded signal input"] --> voting["Voting and consensus engine"]
-    app --> api["FastAPI application layer"]
-    api --> voting
-    timers["systemd lifecycle jobs"] -. schedules .-> voting
-    voting --> basket["Consensus basket"]
-    basket --> gate["Human quorum · mode · armed · calendar gates"]
-    gate --> executor["Per-member rebalance executor"]
-    executor --> vault["Encrypted per-member token vault"]
-    vault <--> broker["Broker review and order APIs"]
-    broker --> reconcile["Reconciliation and audit trail"]
-    reconcile --> db["SQLite WAL production state"]
-    db --> api
-    db --> mirror["Allowlisted one-way club record"]
-    mirror --> demo["Isolated demo instance<br/>simulated brokerage"]
+    production["Production club state"] --> exporter["Allowlisted aggregate<br/>one-way export"]
+    exporter --> demo["Isolated demo instance<br/>independent database"]
+    simulator["Deterministic broker simulator"] --> demo
     visitors["Public visitors"] --> demo
 ```
 
@@ -60,10 +122,14 @@ not production authority or member data.
 
 ## Trading cycle
 
-1. **Allocate.** Members distribute voting power across the securities they want the club to hold. Voting power is earned through measured performance; it cannot be purchased.
+1. **Allocate.** Members distribute voting power across the securities they
+   want the club to hold. Voting power blends committed capital with measured
+   historical accuracy, whose influence phases in as evidence accumulates.
 2. **Form consensus.** At the close of the ballot, Concordia aggregates the votes into an approximately 20-security, conviction-weighted basket.
 3. **Rebalance.** The executor independently aligns each participating account with the consensus mandate. Securities leaving the basket are sold, new constituents are purchased, overweight positions are trimmed, and correctly weighted holdovers remain untouched. Sell and buy legs run on consecutive trading days to respect T+1 settlement in cash accounts; the system does not use margin.
-4. **Measure.** Club-wide and member-level performance is evaluated against an S&P 500 buy-and-hold benchmark before the process repeats.
+4. **Measure.** Club-wide and member-level decisions are evaluated against an
+   S&P 500 buy-and-hold benchmark, and the resulting accuracy evidence informs
+   the next voting-power snapshot before the process repeats.
 
 ## Technical documentation
 

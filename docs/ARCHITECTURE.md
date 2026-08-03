@@ -11,58 +11,42 @@ club's workload does not require.
 
 ## Production and demonstration topology
 
+### Governance and authorization
+
 ```mermaid
+%%{init: {"themeVariables": {"fontSize": "20px"}, "flowchart": {"nodeSpacing": 55, "rankSpacing": 65, "curve": "linear"}}}%%
 flowchart TB
-    subgraph clients["Client surfaces"]
-        member["Member application"]
-        admin["Role-gated operations console"]
-        public["Public demonstration"]
-    end
+    clients["Member and admin<br/>client surfaces"] --> api["FastAPI<br/>application layer"]
+    api --> voting["Voting-power and<br/>consensus engine"]
+    lifecycle["Scheduled lifecycle<br/>jobs"] -. coordinates .-> voting
+    voting --> basket["Consensus basket"]
+    basket --> gates["Execution authorization<br/>and safety gates"]
+```
 
-    subgraph production["Production instance"]
-        api["FastAPI application layer"]
-        auth["Authentication and consent"]
-        voting["Voting and consensus"]
-        lifecycle["Scheduled lifecycle jobs"]
-        executor["Per-member rebalance executor"]
-        safety["Execution authorization and safety gates"]
-        vault["Encrypted OAuth token vault"]
-        reconcile["Broker reconciliation and audit"]
-        db["SQLite WAL source of record"]
+### Per-member execution and reconciliation
 
-        api --> auth
-        api --> voting
-        lifecycle --> voting
-        voting --> executor
-        executor --> safety --> vault
-        reconcile --> db
-        voting --> db
-        auth --> db
-        db --> api
-    end
+```mermaid
+%%{init: {"themeVariables": {"fontSize": "20px"}, "flowchart": {"nodeSpacing": 55, "rankSpacing": 65, "curve": "linear"}}}%%
+flowchart TB
+    gates["Authorized club mandate"] --> planner["Member-specific<br/>rebalance plan"]
+    planner --> vault["Encrypted member<br/>OAuth token"]
+    vault --> review["Broker pre-trade<br/>review"]
+    review --> fills["Order placement<br/>and fills"]
+    fills --> reconcile["Broker reconciliation<br/>and audit"]
+    reconcile --> db["SQLite WAL<br/>source of record"]
+```
 
-    subgraph brokerage["Independent member brokerage accounts"]
-        review["Broker pre-trade review"]
-        orders["Order placement and fills"]
-        review --> orders
-    end
+### Production-to-demo boundary
 
-    subgraph demonstration["Isolated public-demo instance"]
-        demoapi["Same application API"]
-        demodb["Independent demo database"]
-        simulator["Deterministic broker simulator"]
-        demoapi <--> demodb
-        demoapi <--> simulator
-    end
-
-    member --> api
-    admin --> api
-    vault --> review
-    orders --> reconcile
-    db --> exporter["Allowlisted aggregate exporter"]
-    exporter --> bundle["Atomic read-only JSON bundle"]
-    bundle --> demoapi
-    public --> demoapi
+```mermaid
+%%{init: {"themeVariables": {"fontSize": "20px"}, "flowchart": {"nodeSpacing": 60, "rankSpacing": 60, "curve": "linear"}}}%%
+flowchart TB
+    db["Production source of record"] --> exporter["Allowlisted aggregate exporter"]
+    exporter --> bundle["Atomic read-only bundle"]
+    bundle --> demo["Isolated public-demo API"]
+    simulator["Deterministic broker simulator"] --> demo
+    demo --> demodb["Independent demo database"]
+    visitors["Public visitors"] --> demo
 ```
 
 The most important boundary is not between frontend and backend; it is between
