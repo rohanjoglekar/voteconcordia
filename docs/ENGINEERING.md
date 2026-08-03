@@ -23,23 +23,26 @@ capital limit, brokerage state, and audit history.
 ## Order-authorization decision map
 
 ```mermaid
-%%{init: {"themeVariables": {"fontSize": "20px"}, "flowchart": {"nodeSpacing": 55, "rankSpacing": 50, "curve": "linear"}}}%%
+%%{init: {"theme": "base", "themeVariables": {"fontSize": "17px", "lineColor": "#64748b", "edgeLabelBackground": "#ffffff"}, "flowchart": {"nodeSpacing": 32, "rankSpacing": 42, "curve": "basis"}}}%%
 flowchart TB
-    run["Scheduled or manual execution run"] --> live{"Live mode enabled?"}
-    live -- "No" --> reviewonly["Complete sizing and review<br/>record only · no order"]
-    live -- "Yes" --> armed{"Human armed?"}
-    armed -- "No" --> reviewonly
-    armed -- "Yes" --> clear{"Kill state clear?"}
-    clear -- "No" --> reviewonly
-    clear -- "Yes" --> quorum{"Human quorum met?"}
-    quorum -- "No" --> reviewonly
-    quorum -- "Yes" --> calendar{"Market calendar current?"}
-    calendar -- "No" --> reviewonly
-    calendar -- "Yes" --> fresh{"Member data complete<br/>and current?"}
-    fresh -- "No" --> skipmember["Skip member and audit reason"]
-    fresh -- "Yes" --> broker{"Broker review passes?"}
-    broker -- "No" --> skiporder["Skip order and retain alert"]
-    broker -- "Yes" --> place["Place idempotent member order"]
+    subgraph primary["AUTHORIZED PATH"]
+        direction LR
+        run(["EXECUTION<br/>RUN"]):::start --> global{"GLOBAL CONTROLS<br/>mode · arm · kill<br/>quorum · calendar"}:::gate
+        global -- "clear" --> member{"MEMBER STATE<br/>complete + current"}:::gate
+        member -- "current" --> broker{"BROKER<br/>REVIEW"}:::gate
+        broker -- "pass" --> place(["IDEMPOTENT<br/>MEMBER ORDER"]):::success
+    end
+
+    global -. "blocked" .-> review["REVIEW-ONLY<br/>record"]:::exception
+    member -. "incomplete" .-> skip["SKIP MEMBER<br/>+ audit reason"]:::exception
+    broker -. "alert" .-> block["BLOCK ORDER<br/>+ retain alert"]:::exception
+
+    classDef start fill:#eff6ff,stroke:#2563eb,color:#1e3a8a,stroke-width:2px,font-weight:700;
+    classDef gate fill:#fef3c7,stroke:#d97706,color:#78350f,stroke-width:2px,font-weight:700;
+    classDef success fill:#ccfbf1,stroke:#0f766e,color:#134e4a,stroke-width:2px,font-weight:700;
+    classDef exception fill:#f8fafc,stroke:#64748b,color:#334155,stroke-width:2px,font-weight:700;
+    style primary fill:#f0fdfa,stroke:#0f766e,stroke-width:2px,color:#134e4a
+    linkStyle default stroke:#64748b,stroke-width:2px;
 ```
 
 The executor performs the same sizing, validation, and pre-trade review work in
