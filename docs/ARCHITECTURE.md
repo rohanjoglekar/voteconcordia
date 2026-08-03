@@ -9,6 +9,68 @@ order sizing. The design prioritizes an execution path that one operator can
 inspect, reconcile, and recover over distributed infrastructure that the
 club's workload does not require.
 
+## Production and demonstration topology
+
+```mermaid
+flowchart TB
+    subgraph clients["Client surfaces"]
+        member["Member application"]
+        admin["Role-gated operations console"]
+        public["Public demonstration"]
+    end
+
+    subgraph production["Production instance"]
+        api["FastAPI application layer"]
+        auth["Authentication and consent"]
+        voting["Voting and consensus"]
+        lifecycle["Scheduled lifecycle jobs"]
+        executor["Per-member rebalance executor"]
+        safety["Execution authorization and safety gates"]
+        vault["Encrypted OAuth token vault"]
+        reconcile["Broker reconciliation and audit"]
+        db["SQLite WAL source of record"]
+
+        api --> auth
+        api --> voting
+        lifecycle --> voting
+        voting --> executor
+        executor --> safety --> vault
+        reconcile --> db
+        voting --> db
+        auth --> db
+        db --> api
+    end
+
+    subgraph brokerage["Independent member brokerage accounts"]
+        review["Broker pre-trade review"]
+        orders["Order placement and fills"]
+        review --> orders
+    end
+
+    subgraph demonstration["Isolated public-demo instance"]
+        demoapi["Same application API"]
+        demodb["Independent demo database"]
+        simulator["Deterministic broker simulator"]
+        demoapi <--> demodb
+        demoapi <--> simulator
+    end
+
+    member --> api
+    admin --> api
+    vault --> review
+    orders --> reconcile
+    db --> exporter["Allowlisted aggregate exporter"]
+    exporter --> bundle["Atomic read-only JSON bundle"]
+    bundle --> demoapi
+    public --> demoapi
+```
+
+The most important boundary is not between frontend and backend; it is between
+governance, authorization, and custody. Consensus determines a portfolio
+mandate, but only the execution layer can translate that mandate into
+member-specific orders, and it can do so only after evaluating independent
+safety gates and broker review. Credentials remain member-scoped throughout.
+
 ## Runtime components
 
 **Backend.** FastAPI runs over SQLite in WAL mode under a dedicated Unix
@@ -144,3 +206,14 @@ a local stale-while-revalidate record. This cache is restricted to display
 paths: order sizing is prohibited from reading it and always performs a fresh,
 uncached broker query. The member interface may therefore be up to ten minutes
 behind the broker, while every trading decision uses current account state.
+
+## Public disclosure boundary
+
+This public architecture exposes the system properties required for technical
+evaluation: non-custodial account separation, scheduled lifecycle management,
+execution authorization, deterministic retry behavior, broker reconciliation,
+display/trading data separation, and public-demo isolation. It intentionally
+omits private schemas, route inventories, token formats, member records,
+credentials, internal hostnames, mutable administration contracts, and
+deployment or recovery commands. The one-way mirror contains only aggregate
+club information already intended for public display.
