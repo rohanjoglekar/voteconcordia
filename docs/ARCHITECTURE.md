@@ -70,8 +70,17 @@ selects the appropriate application shell:
 
 ```ts
 // web/lib/host.ts
-/** demo.voteconcordia.com — the public fake-money instance. */
+/** Any public fake-money instance: demo. (no sign-up, read-only) and demo2.
+ *  (the full onboarding). */
 export function isDemoHost(): boolean {
+  if (typeof window === "undefined") return false;
+  const h = window.location.hostname;
+  return h.startsWith("demo.") || h.startsWith("demo2.");
+}
+
+/** demo.voteconcordia.com — the no-sign-up showcase: a visitor is handed a
+ *  session for one shared demo member and every mutation is refused. */
+export function isPublicDemoHost(): boolean {
   if (typeof window === "undefined") return false;
   return window.location.hostname.startsWith("demo.");
 }

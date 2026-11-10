@@ -6,7 +6,7 @@ member-account execution, trading cycle, safety boundaries, technology stack,
 and operating status, then directs readers to the detailed safety,
 architecture, and design documents in this repository.
 
-**Live demonstration: [demo.voteconcordia.com](https://demo.voteconcordia.com) — invite code `demo`**
+**Live demonstration: [demo.voteconcordia.com](https://demo.voteconcordia.com) — no sign-up; it opens straight into a demo member's account**
 
 Concordia is a production-deployed, real-money investment club in which
 portfolio construction is governed by member vote. During each trading cycle,
@@ -69,10 +69,13 @@ may contribute to the tally within configured limits. Those agents possess no
 broker credentials and cannot authorize execution; real orders still require
 human participation, live-mode configuration, and explicit runtime arming.
 The public demonstration runs the same application against an isolated,
-deterministic brokerage simulator: onboarding, voting, research, basket
-formation, performance history, and account reporting are fully functional,
-while every order remains simulated. Public demonstration registrations are
-open.
+deterministic brokerage simulator and needs no account: it opens straight into
+a read-only demo member whose simulated account holds the club's latest
+basket, beside the live club's forming consensus and its track record. Every
+order remains simulated. The full onboarding (invitation code, emailed
+verification, and the simulated brokerage connection) is available separately
+at [demo2.voteconcordia.com](https://demo2.voteconcordia.com) with invitation
+code `demo`.
 
 ## System at a glance
 
@@ -152,7 +155,7 @@ data, reconciliation, and public-demo boundaries.
 
 ## Operating status
 
-Production membership remains invitation-only. The public demonstration is persistent, and demonstration accounts retain their voting and performance history between visits.
+Production membership remains invitation-only. The public demonstration is read-only and always available; accounts created on the onboarding demonstration at demo2.voteconcordia.com retain their voting and performance history between visits.
 
 Contact: rohannj29@gmail.com
 

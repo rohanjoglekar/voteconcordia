@@ -93,9 +93,12 @@ observation period rather than the layout in which the value appears.
 
 The public application at demo.voteconcordia.com runs the production software
 against a deterministic brokerage simulator in an isolated instance with
-independent database and cryptographic keys. Visitors can complete onboarding,
-vote, inspect research, and observe execution through the same product used by
-the private club. Because a simulated brokerage cannot provide a credible
+independent database and cryptographic keys. It needs no account: visitors land
+in a read-only demo member whose simulated account holds the club's latest
+basket, and they can inspect the live consensus, research and track record
+through the same product used by the private club. A second instance at
+demo2.voteconcordia.com offers the full onboarding and voting with simulated
+execution. Because a simulated brokerage cannot provide a credible
 historical record, aggregate production performance crosses a one-way file
 boundary described in [ARCHITECTURE.md](ARCHITECTURE.md). Fabricated fixtures
 and direct read-only production database access were both rejected.
