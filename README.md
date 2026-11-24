@@ -51,6 +51,17 @@ the **wisdom of crowds** more disciplined by combining four conditions:
   (60%) with a 260-cycle record (40%), and is recalculated every two weeks,
   so one lucky call cannot swing the club.
 
+**Running in shadow: an evidence-based voting rule.** A new rule runs beside
+the live one without affecting it. Each week it scores every ballot against
+the rest of the crowd, keeps a decaying record per member, and changes a
+member's power only once that record clears a two-standard-error "luck dead
+zone". Below the bar, power follows capital alone. In a 2007–2026 simulation
+of 100 strategy-driven members, the rule cost nothing when no member had
+skill, yet gave a planted star member 28% of the power, against 1.5% under the
+live rule. It was chosen from about 45 variants after a review of about 50
+papers. Picking a top-5 or top-10 sub-crowd, Condorcet log-odds weights, and
+"surprisingly popular" voting all did worse.
+
 ```mermaid
 %%{init: {"theme": "base", "themeVariables": {"fontSize": "17px", "lineColor": "#64748b", "edgeLabelBackground": "#ffffff"}, "flowchart": {"nodeSpacing": 32, "rankSpacing": 38, "curve": "basis"}}}%%
 flowchart LR
