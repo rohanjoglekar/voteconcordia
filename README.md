@@ -38,15 +38,18 @@ decisions compared with the S&P 500.
 The governing idea is not to follow conventional wisdom blindly. It is to make
 the **wisdom of crowds** more disciplined by combining four conditions:
 
-- **Diverse perspectives.** Members and bounded research agents may bring
-  different time horizons, sectors, and analytical styles to the same ballot.
+- **Diverse perspectives.** Human members vote beside 100 AI members, each
+  running a distinct, named investment strategy, so different time horizons,
+  sectors, and analytical styles meet on the same ballot.
 - **Independent judgment.** Every participant allocates a complete ballot
   before the group result becomes the execution mandate.
 - **Transparent aggregation.** Conviction is summed through one documented
   tally rather than selected by an opaque portfolio manager.
-- **Measurable feedback.** Voting power blends committed capital with an EWMA
-  of historical accuracy, with performance influence phased in as evidence
-  accumulates instead of overreacting to one successful call.
+- **Measurable feedback.** Voting power is committed capital times a merit
+  multiplier between 0.5× and 2×. The multiplier tracks each member's
+  vote-weighted excess return over the S&P 500, blending a 13-cycle record
+  (60%) with a 260-cycle record (40%), and is recalculated every two weeks,
+  so one lucky call cannot swing the club.
 
 ```mermaid
 %%{init: {"theme": "base", "themeVariables": {"fontSize": "17px", "lineColor": "#64748b", "edgeLabelBackground": "#ffffff"}, "flowchart": {"nodeSpacing": 32, "rankSpacing": 38, "curve": "basis"}}}%%
@@ -64,15 +67,21 @@ flowchart LR
 ```
 
 The club has operated with real capital since July 2026. Private members
-participate through their own accounts alongside research agents whose signals
-may contribute to the tally within configured limits. Those agents possess no
-broker credentials and cannot authorize execution; real orders still require
-human participation, live-mode configuration, and explicit runtime arming.
-The public demonstration runs the same application against an isolated,
-deterministic brokerage simulator and needs no account: it opens straight into
-a read-only demo member whose simulated account holds the club's latest
-basket, beside the live club's forming consensus and its track record. Every
-order remains simulated. The full onboarding (invitation code, emailed
+participate through their own accounts alongside AI voting members. Each AI
+member votes through the Claude API on every S&P 500 name from a fixed set of
+fundamentals and returns, and writes a thesis of at most 30 words. They hold no
+account, no broker credentials, and cannot authorize execution; real orders
+still require human participation, live-mode configuration, and explicit
+runtime arming. The member agreement discloses that some voters are AI. AI
+members are asked again only when their weekly data changes, which keeps the
+cost near $6 a month. Their ballots average a 0.032 correlation with one
+another, which makes them roughly 24 effectively independent voters.
+
+The public demonstration needs no account. It opens straight into a read-only
+demo member whose balance, holdings, and chart come from the club's Alpaca
+paper reference account, opened in August 2026 with $1,000,000 and shown
+scaled to $1,000. The live club's forming consensus and track record sit
+beside it, and every order remains simulated. The full onboarding (invitation code, emailed
 verification, and the simulated brokerage connection) is available separately
 at [demo2.voteconcordia.com](https://demo2.voteconcordia.com) with invitation
 code `demo`.
@@ -130,12 +139,29 @@ not production authority or member data.
 
 1. **Allocate.** Members distribute voting power across the securities they
    want the club to hold. Voting power blends committed capital with measured
-   historical accuracy, whose influence phases in as evidence accumulates.
-2. **Form consensus.** At the close of the ballot, Concordia aggregates the votes into an approximately 20-security, conviction-weighted basket.
-3. **Rebalance.** The executor independently aligns each participating account with the consensus mandate. Securities leaving the basket are sold, new constituents are purchased, overweight positions are trimmed, and correctly weighted holdovers remain untouched. Sell and buy legs run on consecutive trading days to respect T+1 settlement in cash accounts; the system does not use margin.
+   historical accuracy, recalculated every two weeks.
+2. **Form consensus.** The ballot closes at 09:15 ET each Monday, and Concordia aggregates the votes into an approximately 20-security, conviction-weighted basket.
+3. **Rebalance.** The executor independently aligns each participating account with the consensus mandate. Securities leaving the basket are sold, new constituents are purchased, overweight positions are trimmed, and correctly weighted holdovers remain untouched. Accounts with instant settlement sell and buy in the same run; cash accounts finish their buys the next trading day once sale proceeds settle (T+1). The system does not use margin.
 4. **Measure.** Club-wide and member-level decisions are evaluated against an
    S&P 500 buy-and-hold benchmark, and the resulting accuracy evidence informs
    the next voting-power snapshot before the process repeats.
+
+## Member app
+
+The member app was rebuilt in November 2026:
+
+- **Home** shows the account, holdings, and the current vote under one chart.
+- **Research** offers ten stock lists, sector moves, a watchlist, a page per
+  stock, news from Federal Reserve press releases and SEC EDGAR filings, and a
+  fear-and-greed gauge. Market data is read through the member's own
+  Robinhood connection and cached per member.
+- **History**, **Account**, and **Leave the club** pages replace the old club
+  tab. Sign-in and onboarding were redesigned.
+- **Stakes** come in two forms. A dollar stake works like an automatic
+  allocation, so shares a member sells by hand are bought back. A percentage
+  stake stays a share of the account, so new cash joins it automatically.
+- **Trade approvals.** Members whose Robinhood account holds every order for
+  manual approval are detected and warned before the trading run.
 
 ## Technical documentation
 
@@ -148,14 +174,27 @@ These documents include focused excerpts from the private production repository.
 
 ## Technology
 
-FastAPI; SQLite in WAL mode; Next.js 14; systemd services and timers on a
-single Linux server; per-member Robinhood OAuth through MCP; and more than 200
+FastAPI; SQLite in WAL mode; Next.js 14, React, TypeScript, Tailwind, and
+three.js; systemd services and timers behind nginx on a single Linux server;
+per-member Robinhood OAuth through MCP; the Anthropic Claude API for the AI
+members; the Alpaca paper API for the reference account; and more than 900
 backend test functions across governance, execution, authentication, market
 data, reconciliation, and public-demo boundaries.
 
 ## Operating status
 
-Production membership remains invitation-only. The public demonstration is read-only and always available; accounts created on the onboarding demonstration at demo2.voteconcordia.com retain their voting and performance history between visits.
+As of November 20, 2026, across 52 decided sessions since June 17, the club's
+paper decisions index stands at +5.6% against the S&P 500's −6.9%.
+
+Production membership remains invitation-only, with a public waitlist at
+[voteconcordia.com](https://voteconcordia.com). The public demonstration is read-only and always available; accounts created on the onboarding demonstration at demo2.voteconcordia.com retain their voting and performance history between visits.
+
+## Related project
+
+The [Agentic Research & Trading Platform](https://github.com/rohanjoglekar/agentic-research-trading-platform)
+uses AI agents and rule-based code to research about 600 US stocks, build DCF
+models from SEC filings, and run two paper trading books against the S&P 500.
+[Live demo](https://agentic-research-trading.vercel.app/demo).
 
 Contact: rohannj29@gmail.com
 

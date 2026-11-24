@@ -14,7 +14,7 @@ brokerage accounts without pooling capital or taking custody. The private
 application includes a FastAPI backend, a Next.js member and administration
 experience, SQLite in WAL mode, encrypted per-member OAuth storage, scheduled
 trading-cycle jobs, a broker simulator, production monitoring and backup jobs,
-and more than 200 backend test functions.
+and more than 900 backend test functions.
 
 The core engineering challenge is translating one collective decision into
 many account-specific rebalances while preserving each member's authorization,
