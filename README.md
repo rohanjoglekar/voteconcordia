@@ -72,9 +72,7 @@ member votes through the Claude API on every S&P 500 name from a fixed set of
 fundamentals and returns, and writes a thesis of at most 30 words. They hold no
 account, no broker credentials, and cannot authorize execution; real orders
 still require human participation, live-mode configuration, and explicit
-runtime arming. The member agreement discloses that some voters are AI. AI
-members are asked again only when their weekly data changes, which keeps the
-cost near $6 a month. Their ballots average a 0.032 correlation with one
+runtime arming. The member agreement discloses that some voters are AI. Their ballots average a 0.032 correlation with one
 another, which makes them roughly 24 effectively independent voters.
 
 The public demonstration needs no account. It opens straight into a read-only
