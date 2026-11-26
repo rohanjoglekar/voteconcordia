@@ -161,8 +161,8 @@ error or attempting access to production.
 
 Execution proceeds independently for each member. The service reads current
 balance and club-attributed holdings, computes the required changes against
-the consensus basket, and submits every proposed order to broker-side
-pre-trade review. Constituents leaving the basket are sold, overweight
+the consensus portfolio, and submits every proposed order to broker-side
+pre-trade review. Constituents leaving the portfolio are sold, overweight
 positions are reduced, entrants and underweights are funded, and correctly
 weighted holdovers generate no order. Final placement authority is represented
 by a single boolean established at the start of the run:
@@ -184,7 +184,7 @@ base = "LIVE" if will_place else ("DRY_RUN(disarmed)" if settings.is_live else "
 When `will_place=False`, all downstream sizing, validation, review, and record
 generation still occurs, but no order reaches placement. A disarmed run
 therefore produces the same review artifact available for inspection before
-authorization. The complete control model, including stale-basket rejection
+authorization. The complete control model, including stale-portfolio rejection
 and consequence-based failure behavior, is documented in
 [SAFETY.md](SAFETY.md).
 

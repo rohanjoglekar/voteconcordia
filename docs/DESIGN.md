@@ -26,7 +26,7 @@ term phases in as observations accumulate so one early success cannot dominate
 the club.
 
 This is a hypothesis under continuous measurement, not a promise of
-outperformance. The interface exposes the basket, benchmark, participation,
+outperformance. The interface exposes the portfolio, benchmark, participation,
 and per-cycle history so the group process can be evaluated on evidence rather
 than justified after the fact. Research agents enter through the same tallying
 model under bounded aggregate influence, but they hold no execution authority
@@ -34,7 +34,7 @@ or brokerage credentials.
 
 ## Rebalance only what changed
 
-A full-liquidation executor would sell and repurchase the entire basket during
+A full-liquidation executor would sell and repurchase the entire portfolio during
 every cycle. Although mechanically simple, that approach would generate
 unnecessary turnover, multiply spread costs, and create taxable transactions
 for holdings whose investment mandate had not changed. Concordia instead
@@ -95,7 +95,7 @@ The public application at demo.voteconcordia.com runs the production software
 against a deterministic brokerage simulator in an isolated instance with
 independent database and cryptographic keys. It needs no account: visitors land
 in a read-only demo member whose simulated account holds the club's latest
-basket, and they can inspect the live consensus, research and track record
+portfolio, and they can inspect the live consensus, research and track record
 through the same product used by the private club. A second instance at
 demo2.voteconcordia.com offers the full onboarding and voting with simulated
 execution. Because a simulated brokerage cannot provide a credible

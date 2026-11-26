@@ -19,7 +19,7 @@ review-only operation: it calculates quantities, submits pre-trade reviews,
 and records the proposed actions without placing orders.
 
 Two additional guards can downgrade an otherwise authorized run. A human
-quorum floor prevents research-agent votes from creating a real basket when
+quorum floor prevents research-agent votes from creating a real portfolio when
 human participation falls below the configured minimum. A calendar-coverage
 check blocks execution when the maintained market-holiday table no longer
 covers the current year, because uncertainty about whether a date is tradable
@@ -54,14 +54,14 @@ cannot be automatically retried or overridden. The broker has the most current
 view of account restrictions, day-trading limits, and market halts, so its
 rejection is treated as authoritative.
 
-## Stale-basket refusal
+## Stale-portfolio refusal
 
 The buy phase runs one trading day after the sell phase to satisfy T+1 cash
 settlement and must therefore locate the session it is completing. This design
 produced a material near miss: session 14, dated 2026-07-20, remained `closed`
 after three order errors prevented transition to `executed`. Weeks later, it
 was still the only closed session while production was live and armed. A
-subsequent buy-phase invocation could have repurchased a basket the club had
+subsequent buy-phase invocation could have repurchased a portfolio the club had
 exited six cycles earlier. Concordia now applies a hard age-based refusal:
 
 ```python
@@ -95,7 +95,7 @@ Failure behavior is selected according to the consequence of uncertainty:
   club's holdings in each member account from the broker order feed. If a
   failed page or invalid cursor makes that derivation incomplete, the member
   is skipped for the current cycle. Treating an incomplete feed as an empty
-  position set could omit required sells or repurchase the entire basket:
+  position set could omit required sells or repurchase the entire portfolio:
 
   ```python
   # backend/app/services/executor.py

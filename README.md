@@ -11,7 +11,7 @@ architecture, and design documents in this repository.
 Concordia is a production-deployed, real-money investment club in which
 portfolio construction is governed by member vote. During each trading cycle,
 participants allocate 100% of their voting power across an S&P 500 universe.
-The highest-conviction selections form a consensus basket, which Concordia
+The highest-conviction selections form a consensus portfolio, which Concordia
 automatically rebalances inside each participant's independently owned
 Robinhood account. Capital is never pooled, the club never assumes custody, and
 the platform has no mechanism to deposit, withdraw, or transfer member funds.
@@ -104,7 +104,7 @@ flowchart TB
         direction LR
         members(["MEMBER<br/>BALLOTS"]):::voice --> consensus["CONSENSUS<br/>ENGINE"]:::engine
         agents(["BOUNDED AGENT<br/>SIGNALS"]):::agent --> consensus
-        consensus --> basket(["AUDITABLE<br/>BASKET"]):::mandate
+        consensus --> basket(["AUDITABLE<br/>PORTFOLIO"]):::mandate
     end
 
     subgraph execution["02 · INDEPENDENT EXECUTION"]
@@ -149,8 +149,8 @@ not production authority or member data.
 1. **Allocate.** Members distribute voting power across the securities they
    want the club to hold. Voting power blends committed capital with measured
    historical accuracy, recalculated every two weeks.
-2. **Form consensus.** The ballot closes at 09:15 ET each Monday, and Concordia aggregates the votes into an approximately 20-security, conviction-weighted basket.
-3. **Rebalance.** The executor independently aligns each participating account with the consensus mandate. Securities leaving the basket are sold, new constituents are purchased, overweight positions are trimmed, and correctly weighted holdovers remain untouched. Accounts with instant settlement sell and buy in the same run; cash accounts finish their buys the next trading day once sale proceeds settle (T+1). The system does not use margin.
+2. **Form consensus.** The ballot closes at 09:15 ET each Monday, and Concordia aggregates the votes into an approximately 20-security, conviction-weighted portfolio.
+3. **Rebalance.** The executor independently aligns each participating account with the consensus mandate. Securities leaving the portfolio are sold, new constituents are purchased, overweight positions are trimmed, and correctly weighted holdovers remain untouched. Accounts with instant settlement sell and buy in the same run; cash accounts finish their buys the next trading day once sale proceeds settle (T+1). The system does not use margin.
 4. **Measure.** Club-wide and member-level decisions are evaluated against an
    S&P 500 buy-and-hold benchmark, and the resulting accuracy evidence informs
    the next voting-power snapshot before the process repeats.
@@ -175,7 +175,7 @@ The member app was rebuilt in November 2026:
 ## Technical documentation
 
 - **[Engineering case study](docs/ENGINEERING.md)** — Provides an employer-oriented account of the system's scope, trust boundaries, hardest implementation problems, and verification strategy without exposing private source or member data.
-- **[Safety](docs/SAFETY.md)** — Defines the independent conditions required before the system may place a real order, together with the stale-session guard introduced after a near miss could have repurchased a basket the club had exited six cycles earlier.
+- **[Safety](docs/SAFETY.md)** — Defines the independent conditions required before the system may place a real order, together with the stale-session guard introduced after a near miss could have repurchased a portfolio the club had exited six cycles earlier.
 - **[Architecture](docs/ARCHITECTURE.md)** — Describes two isolated instances of one codebase on a single server and the one-way file boundary that exposes the live club's aggregate track record to the public demonstration without granting access to production credentials or member data.
 - **[Design](docs/DESIGN.md)** — Records the product and data-integrity decisions behind the system, including the removal of Catmull–Rom chart smoothing after measured renderings exceeded the true price range in 13 of 15 symbol-and-window combinations.
 

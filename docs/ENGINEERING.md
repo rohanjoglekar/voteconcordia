@@ -55,10 +55,10 @@ alert blocks only the affected order.
 
 | Problem | Engineering decision | Public evidence |
 |---|---|---|
-| One basket must execute across accounts with different balances and holdings. | Compute a separate rebalance plan per member from current broker state and the member's explicit capital commitment. | Holdovers generate no order, entrants and underweights are funded, and departing or overweight positions are reduced independently. |
+| One portfolio must execute across accounts with different balances and holdings. | Compute a separate rebalance plan per member from current broker state and the member's explicit capital commitment. | Holdovers generate no order, entrants and underweights are funded, and departing or overweight positions are reduced independently. |
 | A retry after partial failure must not duplicate orders. | Derive deterministic order identity from the cycle, member, security, and action, then reconcile local state against the broker before execution. | Ambiguous local errors are promoted to filled, rejected, or retryable states using broker records as truth. |
-| Cash-account settlement separates sells from buys. | Run the legs on consecutive trading days and reject any session older than the bounded settlement window. | A documented near miss led to the stale-basket guard that blocks obsolete cycles rather than inferring intent. |
-| Research agents can inform governance but must not independently trigger capital movement. | Bound agent influence, require human participation, and separate consensus from live-mode and runtime-arming authority. | Agents have no broker credentials; a basket still cannot reach placement unless every execution gate passes. |
+| Cash-account settlement separates sells from buys. | Run the legs on consecutive trading days and reject any session older than the bounded settlement window. | A documented near miss led to the stale-portfolio guard that blocks obsolete cycles rather than inferring intent. |
+| Research agents can inform governance but must not independently trigger capital movement. | Bound agent influence, require human participation, and separate consensus from live-mode and runtime-arming authority. | Agents have no broker credentials; a portfolio still cannot reach placement unless every execution gate passes. |
 | A public demo should prove the product without touching production. | Run the same application against a deterministic broker simulator, an independent database, and a one-way allowlisted aggregate-data mirror. | Complete compromise of the demo would expose only data already approved for public display. |
 | Fast account pages and current trading decisions need different freshness guarantees. | Serve display snapshots with stale-while-revalidate behavior while prohibiting order sizing from using cached balances or holdings. | The UI may be minutes behind; execution always performs a fresh broker read. |
 
@@ -66,7 +66,7 @@ alert blocks only the affected order.
 
 Concordia separates five forms of authority:
 
-- **Governance authority** determines the consensus basket but cannot place an
+- **Governance authority** determines the consensus portfolio but cannot place an
   order.
 - **Execution authority** requires live configuration, explicit human arming,
   sufficient human participation, a current market calendar, and no kill state.
